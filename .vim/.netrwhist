@@ -1,0 +1,7 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =5
+let g:netrw_dirhist_1='/home/joel/binary_record/spec'
+let g:netrw_dirhist_2='/home/joel/binary_record/spec/models'
+let g:netrw_dirhist_3='/home/joel/binary_record/spec'
+let g:netrw_dirhist_4='/home/joel/binary_record/spec/validators'
+let g:netrw_dirhist_5='/home/joel/binary_record/spec'
