@@ -64,7 +64,7 @@ set isfname+=33
 nnoremap <leader>b :buffers<CR>:buffer<Space>
 nnoremap <C-a><C-a> :b#<CR>
 
-set guifont=Ubuntu\ Mono\ 11
+set guifont=Ubuntu\ Mono\ 9
 
 function! BufSel(pattern)
   let bufcount = bufnr("$")
@@ -117,6 +117,8 @@ set rnu
 "colors dusk
 "colors earendel
 colors herald
+
+highlight Folded guifg=grey
 
 inoremap jk <esc>
 inoremap kj <esc>
