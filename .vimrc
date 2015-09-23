@@ -18,6 +18,7 @@ Bundle 'christoomey/vim-tmux-navigator'
 Bundle 'elzr/vim-json'
 Bundle 'ntpeters/vim-better-whitespace'
 Bundle 'skammer/vim-css-color'
+Bundle 'tmux-plugins/vim-tmux'
 Bundle 'vim-ruby/vim-ruby'
 
 filetype plugin on
