@@ -1,7 +1,26 @@
-
-call pathogen#infect()
-
 set nocompatible
+filetype off
+
+set rtp+=~/.vim/bundle/vundle/
+call vundle#rc()
+
+Bundle 'gmarik/vundle'
+
+Bundle 'tpope/vim-abolish'
+Bundle 'tpope/vim-bundler'
+Bundle 'tpope/vim-endwise'
+Bundle 'tpope/vim-fugitive'
+Bundle 'tpope/vim-rails'
+Bundle 'tpope/vim-surround'
+
+Bundle 'airblade/vim-gitgutter'
+Bundle 'christoomey/vim-tmux-navigator'
+Bundle 'elzr/vim-json'
+Bundle 'ntpeters/vim-better-whitespace'
+Bundle 'skammer/vim-css-color'
+Bundle 'vim-ruby/vim-ruby'
+
+filetype plugin on
 
 set t_Co=256
 
@@ -23,6 +42,15 @@ set ruler
 set backspace=indent,eol,start
 set laststatus=2
 
+set splitright
+set splitbelow
+
+" Use zsh as the default vim shell
+set shell=/usr/local/bin/zsh\ -l
+
+" Save unwriteable files with sudo
+cmap w!! w !sudo tee > /dev/null %
+
 set guioptions-=m
 set guioptions-=T
 set mouse-=a
@@ -43,7 +71,6 @@ set showmatch
 set hlsearch
 nnoremap <leader><space> :noh<cr>
 
-
 " persist undos when closing vim
 set undofile
 set undodir=~/tmp
@@ -52,13 +79,10 @@ set cursorline
 hi CursorLine term=underline cterm=underline gui=underline
 
 syntax on
-
 set nocp
-filetype plugin on
 
 " space is a valid filename character
 set isfname+=33
-
 
 "commands to make buffers easier to use
 nnoremap <leader>b :buffers<CR>:buffer<Space>
@@ -96,6 +120,8 @@ endfunction
 command! -nargs=1 Bs :call BufSel("<args>")
 nnoremap Bs :Bs<Space>
 
+set rtp+=/usr/local/Cellar/fzf/0.10.2/
+
 "disable hiding quotes around keys in json
 let g:vim_json_syntax_conceal=0
 
@@ -104,6 +130,9 @@ autocmd FileType ruby set sw=2 sts=2 et
 
 "set colorcolumn=80,120
 set rnu
+
+set foldmethod=syntax
+set foldlevelstart=1
 
 "colorshemes that I like
 "colors desert
@@ -135,3 +164,4 @@ map <A-l> <C-W>l
 "autocmd BufEnter *txt,*rtf execute ":source ~/txt.vim"
 au BufNewFile,BufRead *.js.erb set filetype=javascript
 
+autocmd BufWritePre * StripWhitespace
