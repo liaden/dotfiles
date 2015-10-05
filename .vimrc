@@ -25,6 +25,7 @@ Bundle 'scrooloose/nerdcommenter'
 Bundle 'skammer/vim-css-color'
 Bundle 'tmhedberg/matchit'
 Bundle 'tmux-plugins/vim-tmux'
+Bundle 'tmux-plugins/vim-tmux-focus-events'
 Bundle 'vim-ruby/vim-ruby'
 
 filetype plugin on
