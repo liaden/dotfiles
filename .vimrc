@@ -16,9 +16,12 @@ Bundle 'tpope/vim-surround'
 Bundle 'airblade/vim-gitgutter'
 Bundle 'christoomey/vim-tmux-navigator'
 Bundle 'elzr/vim-json'
+Bundle 'flazz/vim-colorschemes'
+Bundle 'ingydotnet/yaml-vim'
 Bundle 'kana/vim-textobj-user'
 Bundle 'nelstrom/vim-textobj-rubyblock'
 Bundle 'ntpeters/vim-better-whitespace'
+Bundle 'scrooloose/nerdcommenter'
 Bundle 'skammer/vim-css-color'
 Bundle 'tmhedberg/matchit'
 Bundle 'tmux-plugins/vim-tmux'
@@ -166,6 +169,7 @@ map <A-l> <C-W>l
 "autocmd BufEnter *cpp execute ":source ~/cpp.vim"
 "autocmd BufEnter *xml execute ":source ~/xml.vim"
 "autocmd BufEnter *txt,*rtf execute ":source ~/txt.vim"
-au BufNewFile,BufRead *.js.erb set filetype=javascript
+au BufNewFile,BufRead *.js.erb      set filetype=javascript
+au BufNewFile,BufRead *.yaml,*.yml  setf yaml
 
 autocmd BufWritePre * StripWhitespace
