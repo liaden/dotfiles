@@ -28,6 +28,10 @@ Bundle 'tmux-plugins/vim-tmux'
 Bundle 'tmux-plugins/vim-tmux-focus-events'
 Bundle 'vim-ruby/vim-ruby'
 
+
+" Fix vim-tmux-focus-events leaving text behind
+au FocusLost * silent redraw!
+
 filetype plugin on
 
 set t_Co=256
@@ -66,7 +70,7 @@ set guioptions+=lbrLR
 set guioptions-=lbrLR
 
 " make basic controls easier to use
-let mapleader = ","
+let mapleader = " "
 
 " make regex behave sanely
 nnoremap / /\v
