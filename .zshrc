@@ -39,4 +39,6 @@ bindkey '^r' history-incremental-search-backward
 source /usr/local/share/chruby/chruby.sh
 source /usr/local/opt/chruby/share/chruby/auto.sh
 
+setopt HIST_IGNORE_SPACE
+
 source ~/.zsh_work
