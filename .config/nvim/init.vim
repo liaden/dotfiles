@@ -10,24 +10,38 @@ Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-fugitive'
-Plug 'tpope/vim-rails'
 Plug 'tpope/vim-surround'
 
-Plug 'airblade/vim-gitgutter'
-Plug 'christoomey/vim-tmux-navigator'
+" neoterm specific
+Plug 'kassio/neoterm'
+
+" languages
 Plug 'elzr/vim-json'
-Plug 'flazz/vim-colorschemes'
 Plug 'ingydotnet/yaml-vim'
-Plug 'kana/vim-textobj-user'
-Plug 'nelstrom/vim-textobj-rubyblock'
-Plug 'ntpeters/vim-better-whitespace'
-Plug 'scrooloose/nerdcommenter'
 Plug 'skammer/vim-css-color'
-Plug 'tmhedberg/matchit'
+
+" ruby
+Plug 'nelstrom/vim-textobj-rubyblock'
+Plug 'vim-ruby/vim-ruby'
+Plug 'tpope/vim-rails'
+
+" tmux
+Plug 'christoomey/vim-tmux-navigator'
 Plug 'tmux-plugins/vim-tmux'
 Plug 'tmux-plugins/vim-tmux-focus-events'
-Plug 'vim-ruby/vim-ruby'
+
+Plug 'airblade/vim-gitgutter'
+Plug 'flazz/vim-colorschemes'
+Plug 'kana/vim-textobj-user'
+Plug 'ntpeters/vim-better-whitespace'
+Plug 'scrooloose/nerdcommenter'
+Plug 'tmhedberg/matchit'
 Plug 'junegunn/fzf'
+
+Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+
+" lint
+Plug 'vim-syntastic/syntastic'
 
 call plug#end()
 
@@ -61,7 +75,10 @@ set splitright
 set splitbelow
 
 " Use zsh as the default vim shell
-set shell=/usr/local/bin/zsh\ -l
+set shell=zsh
+
+" Fix dropping out of terminal mode
+tnoremap <Esc> <C-\><C-n>
 
 " Save unwriteable files with sudo
 cmap w!! w !sudo tee > /dev/null %
@@ -162,16 +179,41 @@ set foldlevelstart=1
 "colors earendel
 colors herald
 
-highlight Folded guifg=grey
+" Zoom In/Out into another tab
+function! s:TabToggle() abort
+  if tabpagewinnr(tabpagenr(), '$') > 1
+    " Zoom in when this tab has more than one window
+    tab split
+  elseif tabpagenr('$') > 1
+    " Zoom out when this tab is not the last tab
+    if tabpagenr() < tabpagenr('$')
+      tabclose
+      tabprevious
+    else
+      tabclose
+    endif
+  endif
+endfunction
+command! TabToggle call s:TabToggle()
+nnoremap <leader>t :TabToggle<cr>
 
-inoremap jk <esc>
-inoremap kj <esc>
+highlight Folded guifg=grey
 
 " split bindings
 map <A-j> <C-W>j
 map <A-h> <C-W>h
 map <A-k> <C-W>k
 map <A-l> <C-W>l
+
+" syntastic
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_auto_loc_list = 1
+let g:syntastic_check_on_open = 1
+let g:syntastic_check_on_wq = 0
+
+" fix muscle memory
+nnoremap $a :echo "Use A"<CR>
+nnoremap ^i :echo "Use I"<CR>
 
 "autocmd BufEnter [^_]*[^.][^.][^.][^.] execute ":source  ~/cpp.vim"
 "autocmd BufEnter *cpp execute ":source ~/cpp.vim"
