@@ -177,7 +177,7 @@ set foldlevelstart=1
 "colors darkspectrum
 "colors dusk
 "colors earendel
-colors herald
+silent! colors herald
 
 " Zoom In/Out into another tab
 function! s:TabToggle() abort
