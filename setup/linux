@@ -13,7 +13,7 @@ export DOTFILES_PATH="$1"
 
 function configure_user() {
   echo "Coniguring user $1"
-  sudo su "$1"
+  sudo -E su "$1"
   pushd ~
 
   cp -r "$DOTFILES_PATH"/.config ~
