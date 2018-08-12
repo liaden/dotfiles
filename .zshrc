@@ -36,8 +36,13 @@ bindkey '^w' backward-kill-word
 bindkey '^r' history-incremental-search-backward
 
 # chruby
-source /usr/local/share/chruby/chruby.sh
-source /usr/local/opt/chruby/share/chruby/auto.sh
+if [[ -d /usr/local/chruby ]]; then
+  source /usr/local/chruby/chruby.sh
+  source /usr/local/chruby/auto.sh
+else
+  source /usr/local/share/chruby/chruby.sh
+  source /usr/local/opt/chruby/share/chruby/auto.sh
+fi
 
 alias vim=nvim
 
