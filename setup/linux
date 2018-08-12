@@ -27,7 +27,7 @@ function configure_user() {
   [ -d antigen ] || mkdir antigen
   curl -L git.io/antigen > ~/antigen/antigen.zsh
 
-  nvim +PlugInstall +qall
+  nvim +silent +'PlugInstall --sync' +qall &> /dev/null < /dev/tty
 
   popd
   exit
