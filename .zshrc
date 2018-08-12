@@ -27,7 +27,7 @@ bindkey -a -s "daW" "bdW"
 # shorten latency when escaping to normal mode
 export KEYTIMEOUT=1
 
-# aadd other features back into vim cli mode
+# add other features back into vim cli mode
 bindkey '^P' up-history
 bindkey '^N' down-history
 bindkey '^?' backward-delete-char
@@ -38,6 +38,8 @@ bindkey '^r' history-incremental-search-backward
 # chruby
 source /usr/local/share/chruby/chruby.sh
 source /usr/local/opt/chruby/share/chruby/auto.sh
+
+alias vim=nvim
 
 setopt HIST_IGNORE_SPACE
 
