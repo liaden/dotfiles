@@ -42,3 +42,4 @@ source /usr/local/opt/chruby/share/chruby/auto.sh
 setopt HIST_IGNORE_SPACE
 
 source ~/.zsh_work
+source ~/.zsh/ag_helpers

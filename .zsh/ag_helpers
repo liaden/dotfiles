@@ -1,0 +1,52 @@
+# aliases for ag options
+alias -g rb="-G 'rb$'"
+alias -g yml="-G 'yml$'"
+alias -g notest="--ignore='test' --ignore='suite' --ignore='spec'"
+alias -g noqa="--ignore 'cnaupp_qa'"
+
+##################
+# ag regex helpers
+##################
+
+# match ruby's class methods and methods
+function ragfn() {
+    ag rb "def\s+(self.)?$1" "${@:2}"
+}
+
+# match ruby's module or class definition
+function ragclass {
+    ag rb "^[ \t]*((class)|(module))\s+[A-Za-z:_0-9]*$1[A-Z-a-z:_0-9]*" "${@:2}"
+}
+
+function ragisa {
+    ag rb "class\s+[A-Za-z:_0-9]+\s+[<]\s+[A-Za-z:_0-9]*$1[A-Za-z:_0-9]*" "${@:2}"
+}
+
+# match for metaprogramming
+function ragcon {
+    ag rb "((include)|(extend))\s+$1" "${@:2}"
+}
+
+# match for activerecord
+function ragar {
+    ag rb "class\s+[A-Za-z_0-9]*$1[A-Za-z_0-9]*\s+(\n\s+)?[<]\s+(ActiveRecord[:][:]Base)|(ApplicationRecord)" "${@:2}"
+}
+
+# match for function call
+function ragfnc {
+    st
+    # need to do look behind to match
+    #   some_func
+    #   some_other_func
+    # need to do look ahead for end coming up ending this function
+    # need to do look behind for # for comments
+    # need to do look ahead for ||=, |=, +=,
+    ag rb "(([^\s\n.]\n\s+)|([A-Za-z_0-9]+[.]))(\s\n)*$1\s+[^=]" "${@:2}"
+}
+
+# match for instance variable
+function ragiv {
+    # deliberately let it match class variables too
+    ag rb "[@][A-Za-z_0-9]*$1[A-Za-z_0-9]*"'[\s.+\-*/!?&|~[\(]' "${@:2}"
+}
+

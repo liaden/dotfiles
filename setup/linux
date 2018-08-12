@@ -7,7 +7,7 @@ sudo add-apt-repository -y ppa:git-core/ppa
 
 sudo apt-get update
 
-sudo apt-get install -y neovim git ctop zsh tmux chruby ruby-install
+sudo apt-get install -y neovim git ctop zsh tmux chruby ruby-install silversearcher-ag
 
 export DOTFILES_PATH="$1"
 
