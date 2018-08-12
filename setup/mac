@@ -8,6 +8,7 @@ brew install fzf
 brew install chruby
 brew install ruby-install
 brew install neovim/neovim/neovim
+brew install direnv
 
 git clone https://github.com/liaden/dotfiles ~/dotfiles
 

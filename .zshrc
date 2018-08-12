@@ -41,6 +41,7 @@ source /usr/local/opt/chruby/share/chruby/auto.sh
 
 setopt HIST_IGNORE_SPACE
 
+eval "$(direnv hook zsh)"
 source ~/.zsh_work
 source ~/.zsh/ag_helpers
 
