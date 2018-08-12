@@ -19,6 +19,7 @@ function configure_user() {
   pushd ~
 
   cp -r "$DOTFILES_PATH"/.config ~
+  cp -r "$DOTFILES_PATH"/.tmux ~
   cp    "$DOTFILES_PATH"/.zshrc ~
   cp    "$DOTFILES_PATH"/.tmux.conf ~
   cp    "$DOTFILES_PATH"/.gitignore_global ~
@@ -30,6 +31,8 @@ function configure_user() {
   curl -L git.io/antigen > ~/antigen/antigen.zsh
 
   nvim +silent +'PlugInstall --sync' +qall &> /dev/null < /dev/tty
+
+  ~/.tmux/plugins/tpm/bin/install_plugins
 
   popd
   exit
