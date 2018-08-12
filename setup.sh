@@ -1,22 +1,26 @@
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-brew install tmux
-brew install hub
-brew install fzf
-brew install neovim/neovim/neovim
+#!/usr/bin/env bash
 
-git clone https://github.com/liaden/dotfiles ~/dotfiles
+function win_setup() {
+    echo 'Not Implemented'
+}
 
-cd ~/dotfiles
+function mac_setup() {
+  /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  brew update && brew install bash
 
-cp -r .config ~
-cp .tmux.conf ~
-cp .pryrc ~
-cp .zshrc ~
-cp .gitconfig ~
+  ./setup/mac
+}
 
-cd ~
+function linux_setup() {
+    ./setup/linux "$(realpath .)"
+}
 
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-~/.tmux/plugins/tpm/bin/install_plugins
+mkdir setup/log
 
-nvim +PlugInstall +qall
+case "$OSTYPE" in
+  darwin*)  mac_setup ;;
+  linux*)   linux_setup ;;
+  msys*)    win_setup ;;
+  *)        echo "unknown: $OSTYPE" ;;
+esac
+
