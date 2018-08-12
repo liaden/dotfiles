@@ -9,6 +9,8 @@ sudo apt-get update
 
 sudo apt-get install -y neovim git ctop zsh tmux chruby ruby-install silversearcher-ag
 
+./setup/linux-fzf
+
 export DOTFILES_PATH="$1"
 
 function configure_user() {

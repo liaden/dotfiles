@@ -43,3 +43,5 @@ setopt HIST_IGNORE_SPACE
 
 source ~/.zsh_work
 source ~/.zsh/ag_helpers
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
