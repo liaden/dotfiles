@@ -21,6 +21,7 @@ function configure_user() {
   cp    "$DOTFILES_PATH"/.tmux.conf ~
   cp    "$DOTFILES_PATH"/.gitignore_global ~
   cp    "$DOTFILES_PATH"/.gitconfig ~
+  cp    "$DOTFILES_PATH"/.bash_login ~
   cp    "$DOTFILES_PATH"/.pryrc ~
 
   [ -d antigen ] || mkdir antigen

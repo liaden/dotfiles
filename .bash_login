@@ -1,0 +1,2 @@
+# convert to zsh if found
+which zsh && exec zsh
