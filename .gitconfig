@@ -14,6 +14,7 @@
     last = log -1 HEAD -p
     recent = branch --sort=committerdate
     rearrange = "rebase -i $(git merge-base HEAD @{u})"
+    append = commit --amend --no-edit
 
 [rebase]
     autoStash = true
