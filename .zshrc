@@ -57,4 +57,6 @@ eval "$(direnv hook zsh)"
 source ~/.zsh_work
 source ~/.zsh/ag_helpers
 
+export EDITOR=nvim
+
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
