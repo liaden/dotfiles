@@ -44,6 +44,10 @@ else
   source /usr/local/opt/chruby/share/chruby/auto.sh
 fi
 
+if [[ -d /Users/jjohnson10/.cargo/bin ]]; then
+  export PATH="/Users/jjohnson10/.cargo/bin:$PATH"
+fi
+
 alias vim=nvim
 
 setopt HIST_IGNORE_SPACE
