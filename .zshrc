@@ -49,6 +49,7 @@ if [[ -d /Users/jjohnson10/.cargo/bin ]]; then
 fi
 
 alias vim=nvim
+alias config="alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'"
 
 setopt HIST_IGNORE_SPACE
 
