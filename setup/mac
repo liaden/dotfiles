@@ -2,28 +2,18 @@
 
 echo "Reminder to myself: this hasn't been tested"
 
-brew install tmux
-brew install hub
-brew install fzf
-brew install chruby
-brew install ruby-install
-brew install neovim/neovim/neovim
+brew install zsh bash pdsh
 brew install direnv
-
-git clone https://github.com/liaden/dotfiles ~/dotfiles
-
-d ~/dotfiles
-
-cp -r .config ~
-cp .tmux.conf ~
-cp .pryrc ~
-cp .zshrc ~
-cp .gitconfig ~
-
-cd ~
-
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-~/.tmux/plugins/tpm/bin/install_plugins
+brew install tmux reattach-to-user-namespace
+brew install hub tig
+brew install fzf
+brew install chruby ruby-install
+brew install neovim/neovim/neovim
+brew install ctop htop glances
+brew install the_silver_searcher
+brew install xz
+brew install wget jq lynx
+brew install gnu-tar gnu-sed
+brew install shellcheck yamllint kubeval
 
 nvim +PlugInstall +qall
-
