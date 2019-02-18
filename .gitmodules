@@ -28,3 +28,6 @@
 [submodule ".tmux/plugins/tmux-yank"]
 	path = .tmux/plugins/tmux-yank
 	url = https://git::@github.com/tmux-plugins/tmux-yank
+[submodule ".zgen"]
+	path = .zgen
+	url = https://github.com/tarjoilija/zgen.git

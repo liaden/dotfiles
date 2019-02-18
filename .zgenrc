@@ -1,0 +1,22 @@
+echo "Creating a zgen save"
+
+zgen oh-my-zsh
+
+# plugins
+zgen oh-my-zsh plugins/git
+zgen oh-my-zsh plugins/sudo
+zgen oh-my-zsh plugins/ruby
+zgen oh-my-zsh plugins/bundler
+zgen oh-my-zsh plugins/chruby
+zgen oh-my-zsh plugins/command-not-found
+zgen load zsh-users/zsh-syntax-highlighting
+zgen load zsh-users/zsh-history-subtring-search
+
+# completions
+zgen load zsh-users/zsh-completions src
+
+# theme
+zgen oh-my-zsh themes/arrow
+
+# save all to init script
+zgen save

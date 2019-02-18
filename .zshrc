@@ -1,19 +1,9 @@
-source ~/antigen/antigen.zsh
+source "${HOME}/.zgen/zgen.zsh"
 
-antigen bundle robbyrussell/oh-my-zsh lib/
-antigen bundle git
-antigen bundle heroku
-antigen bundle zsh-users/zsh-syntax-highlighting
-
-antigen bundle ruby
-antigen bundle rails
-antigen bundle bundler
-antigen bundle chruby
-
-
-antigen theme robbyrussell/oh-my-zsh themes/robbyrussell
-
-antigen apply
+# if the init scipt doesn't exist
+if ! zgen saved; then
+    source "${HOME}/.zgenrc"
+fi
 
 # vim cli settings
 bindkey -v
