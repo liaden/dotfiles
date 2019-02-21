@@ -1,8 +1,15 @@
+export TERM="xterm-256color" # for tmux
+
 source "${HOME}/.zgen/zgen.zsh"
+
+## customize powerlevel9k theme
+if [[ "$(hostname)" == "CLM-JJOHNSON10.local" ]]; then
+  export DEFAULT_USER="jjohnson10"
+fi
 
 # if the init scipt doesn't exist
 if ! zgen saved; then
-    source "${HOME}/.zgenrc"
+  source "${HOME}/.zsh_plugins"
 fi
 
 # vim cli settings
