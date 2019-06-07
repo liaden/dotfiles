@@ -1,0 +1,6 @@
+\set QUIET 1
+\pset null '¤'
+\x auto
+\timing
+\set HISTFILE ~/.psql_history- :DBNAME
+\unset QUIET
