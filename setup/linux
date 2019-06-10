@@ -18,17 +18,20 @@ function configure_user() {
   sudo -E su "$1"
   pushd ~
 
+  mkdir ~/.zsh
+
   cp -r "$DOTFILES_PATH"/.config ~
   cp -r "$DOTFILES_PATH"/.tmux ~
   cp    "$DOTFILES_PATH"/.zshrc ~
+  cp    "$DOTFILES_PATH"/.zsh_plugins ~
+  cp    "$DOTFILES_PATH"/.zsh/ag_helpers ~/.zsh
   cp    "$DOTFILES_PATH"/.tmux.conf ~
   cp    "$DOTFILES_PATH"/.gitignore_global ~
   cp    "$DOTFILES_PATH"/.gitconfig ~
   cp    "$DOTFILES_PATH"/.bash_login ~
   cp    "$DOTFILES_PATH"/.pryrc ~
 
-  [ -d antigen ] || mkdir antigen
-  curl -L git.io/antigen > ~/antigen/antigen.zsh
+  git clone https://github.com/tarjoilija/zgen.git "${HOME}/.zgen"
 
   nvim +silent +'PlugInstall --sync' +qall &> /dev/null < /dev/tty
 
