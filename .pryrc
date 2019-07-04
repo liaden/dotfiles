@@ -22,6 +22,10 @@ class Object
     instance_variable_get(name)
   end
 
+  def m
+    self.methods.sort - Object.new.methods
+  end
+
   def sizeof(target, seen = nil)
     require 'objspace'
     require 'set'
