@@ -16,6 +16,7 @@ Plug 'tpope/vim-surround'
 Plug 'kassio/neoterm'
 
 " languages
+Plug 'rust-lang/rust.vim'
 Plug 'elzr/vim-json'
 Plug 'ingydotnet/yaml-vim'
 Plug 'skammer/vim-css-color'
@@ -25,26 +26,39 @@ Plug 'nelstrom/vim-textobj-rubyblock'
 Plug 'vim-ruby/vim-ruby'
 Plug 'tpope/vim-rails'
 
+Plug 'hashivim/vim-terraform'
+
+" sql
+Plug 'martingms/vipsql'
+
 " tmux
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'tmux-plugins/vim-tmux'
 Plug 'tmux-plugins/vim-tmux-focus-events'
+Plug 'roxma/vim-tmux-clipboard'
 
 Plug 'airblade/vim-gitgutter'
-Plug 'flazz/vim-colorschemes'
 Plug 'kana/vim-textobj-user'
 Plug 'ntpeters/vim-better-whitespace'
 Plug 'scrooloose/nerdcommenter'
 Plug 'tmhedberg/matchit'
 Plug 'junegunn/fzf'
 
-Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+" colorschemes
+Plug 'flazz/vim-colorschemes'
+Plug 'mhartington/oceanic-next'
+
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " lint
-Plug 'vim-syntastic/syntastic'
+Plug 'w0rp/ale'
 
 call plug#end()
 
+"let g:syntastic_ruby_checkers = ['rubocop', 'mri']
+let g:ale_open_list        = 1
+let g:ale_set_quickfix     = 1
+let g:ale_set_loclist      = 0
 
 " Fix vim-tmux-focus-events leaving text behind
 au FocusLost * silent redraw!
@@ -92,6 +106,17 @@ set guioptions-=lbrLR
 " make basic controls easier to use
 let mapleader = " "
 
+" vipsql configuration -- vim postgres
+
+noremap <leader>po :VipsqlOpenSession<CR>
+noremap <silent> <leader>pk :VipsqlCloseSession<CR>
+nnoremap <leader>ps :VipsqlShell<CR>
+vnoremap <leader>ps :VipsqlSendSelection<CR>
+noremap <leader>pr :VipsqlSendRange<CR>
+noremap <leader>pl :VipsqlSendCurrentLine<CR>
+noremap <leader>pb :VipsqlSendBuffer<CR>
+noremap <leader>pc :VipsqlSendInterrupt<CR>
+
 " make regex behave sanely
 nnoremap / /\v
 vnoremap / /\v
@@ -107,8 +132,6 @@ nnoremap <leader><space> :noh<cr>
 set undofile
 set undodir=~/tmp
 
-set cursorline
-hi CursorLine term=underline cterm=underline gui=underline
 
 syntax on
 set nocp
@@ -166,6 +189,10 @@ set rnu
 set foldmethod=syntax
 set foldlevelstart=1
 
+if (has("termguicolors"))
+ set termguicolors
+endif
+
 "colorshemes that I like
 "colors desert
 "colors asu1dark
@@ -177,7 +204,12 @@ set foldlevelstart=1
 "colors darkspectrum
 "colors dusk
 "colors earendel
-silent! colors herald
+"colors herald
+let g:oceanic_next_terminal_bold = 1
+let g:oceanic_next_terminal_italic = 1
+colors OceanicNext
+
+hi CursorLine term=underline cterm=underline gui=underline
 
 " Zoom In/Out into another tab
 function! s:TabToggle() abort
