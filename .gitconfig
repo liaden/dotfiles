@@ -3,20 +3,40 @@
     excludesfile = /Users/jjohnson10/.gitignore
 
 [rerere]
-    enabled = 1
+     enabled = 1
     autoupdate = 1
 
 [alias]
     s = status
     ff = merge --ff-only
+
     unstage = reset HEAD --
-    freshen = commit --amend --no-edit --date=now
-    last = log -1 HEAD -p
+    stash-unstaged = status -k -uq
+
     recent = branch --sort=committerdate
     rearrange = "rebase -i $(git merge-base HEAD @{u})"
+
+    freshen = commit --amend --no-edit --date=now
     append = commit --amend --no-edit
 
-[rebase]
+    d = diff --ignore-all-space
+
+    last = log -1 HEAD -p
+    file-rms = log --diff-filter=D --name-only
+    deletions = log --diff-filter=D
+    on = "!f() { git log --since=$1 --until=${2:$1}; }; f"
+
+    cherries = cherry -v
+    unpicked = "!f() { \
+        _u=\"${1:-$(git rev-parse @{u} 2> /dev/null)}\"; \
+        git cherry \"${_u:-origin/master}\" | grep '^+' | sed 's/+ //';  };  \
+        f"
+
+    aliased = config --get-regexp ^alias\\.
+
+[branch]
+    autosetupmerge = always
+    autosetuprebase = always
     autoStash = true
     autoSquash = true
 

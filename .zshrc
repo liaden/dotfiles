@@ -45,6 +45,7 @@ if [[ -d /Users/jjohnson10/.cargo/bin ]]; then
   export PATH="/Users/jjohnson10/.cargo/bin:$PATH"
 fi
 
+alias git=hub
 alias vim=nvim
 alias config="alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'"
 
@@ -53,6 +54,7 @@ setopt HIST_IGNORE_SPACE
 eval "$(direnv hook zsh)"
 source ~/.zsh_work
 source ~/.zsh/ag_helpers
+source ~/.zsh/git_helpers
 
 export EDITOR=nvim
 
