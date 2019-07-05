@@ -4,12 +4,11 @@ filetype off
 set rtp+=~/.config/nvim/bundle/vundle/
 call plug#begin()
 
-Plug 'gmarik/vundle'
+Plug 'junegunn/vim-plug'
 
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-endwise'
-Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-surround'
 
 " neoterm specific
@@ -37,7 +36,12 @@ Plug 'tmux-plugins/vim-tmux'
 Plug 'tmux-plugins/vim-tmux-focus-events'
 Plug 'roxma/vim-tmux-clipboard'
 
+" git
+Plug 'tpope/vim-fugitive', { 'tag': 'v2.5' }
 Plug 'airblade/vim-gitgutter'
+Plug 'rhysd/committia.vim'
+Plug 'junegunn/gv.vim'
+
 Plug 'kana/vim-textobj-user'
 Plug 'ntpeters/vim-better-whitespace'
 Plug 'scrooloose/nerdcommenter'
