@@ -15,5 +15,9 @@ brew install xz
 brew install wget jq lynx
 brew install gnu-tar gnu-sed
 brew install shellcheck yamllint kubeval
+brew install fd
+brew install asdf
+
+asdf plugin-add ruby https://github.com/asdf-vm/asdf-ruby.git
 
 nvim +PlugInstall +qall

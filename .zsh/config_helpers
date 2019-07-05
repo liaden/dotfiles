@@ -1,0 +1,4 @@
+alias -s zshrc="$EDITOR ~/.zshrc"
+alias -s vimrc="$EDITOR ~/.config/nvim/init.vim"
+alias -s init.vim="$EDITOR ~/.config/nvim/init.vim"
+alias -s tmux.conf="$EDITOR ~/.tmux.conf"

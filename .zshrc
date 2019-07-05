@@ -41,6 +41,10 @@ else
   source /usr/local/opt/chruby/share/chruby/auto.sh
 fi
 
+export ASDF_DIR=$(brew --prefix asdf)
+source $ASDF_DIR/asdf.sh
+source /usr/local/etc/bash_completion.d/asdf.bash
+
 if [[ -d /Users/jjohnson10/.cargo/bin ]]; then
   export PATH="/Users/jjohnson10/.cargo/bin:$PATH"
 fi
@@ -51,11 +55,14 @@ alias config="alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME
 
 setopt HIST_IGNORE_SPACE
 
+export EDITOR=nvim
+export FZF_DEFAULT_OPTS='--height=50% --min-height=15 --reverse'
+export FZF_DEFAULT_CMD='fd --type f'
+
 eval "$(direnv hook zsh)"
 source ~/.zsh_work
 source ~/.zsh/ag_helpers
 source ~/.zsh/git_helpers
 
-export EDITOR=nvim
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
