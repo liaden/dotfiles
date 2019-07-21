@@ -1,4 +1,5 @@
 Pry.config.editor = 'nvim'
+Pry.config.theme = 'solarized'
 
 if defined?(PryByebug) || defined?(PryDebugger)
   Pry.commands.alias_command 'c', 'continue'
