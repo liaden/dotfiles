@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+curl https://sh.rustup.rs -sSf | sh
+
+# completions
+mkdir ~/.zfunc
+rustup completions zsh > ~/.zfunc/_rustup
+rustup completions zsh cargo > ~/.zfunc/_cargo

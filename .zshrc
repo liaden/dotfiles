@@ -3,7 +3,11 @@ export TERM="xterm-256color" # for tmux
 # add linuxbrew and completions
 if [[ -d /home/linuxbrew ]]; then
   export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-  FPATH=$(brew --prefix)/share/zsh/site-functions:$FPATH
+  fpath+="$(brew --prefix)/share/zsh/site-functions"
+fi
+
+if [[ -d $HOME/.zfunc ]]; then
+  fpath+=$HOME/.zfunc
 fi
 
 source "${HOME}/.zgen/zgen.zsh"
@@ -68,7 +72,13 @@ alias git=hub
 alias vim=nvim
 alias config="alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'"
 
-setopt HIST_IGNORE_SPACE
+setopt AUTO_CD                  # cd without explicit cd
+setopt HIST_IGNORE_SPACE        # prefixed ' ' filters command from history
+setopt EXTENDED_HISTORY         # save timestamp and duration
+setopt HIST_FIND_NO_DUPS        # duplicates are still recorded but only one match on history
+setopt HIST_NO_STORE            # remove 'history ...' commands from history
+setopt HIST_REDUCE_BLANKS       # cleanup whitespace
+setopt INC_APPEND_HISTORY_TIME  # add commands to history after command finishes rather than session end
 
 export EDITOR=nvim
 export FZF_DEFAULT_OPTS='--height=50% --min-height=15 --reverse'

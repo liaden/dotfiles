@@ -20,6 +20,8 @@ asdf install nodejs 12.10.0
 nvim +silent +'PlugInstall --sync' +qall &> /dev/null < /dev/tty
 ~/.tmux/plugins/tpm/bin/install_plugins
 
+setup/rust
+
 function configure_user() {
   echo "Coniguring user $1"
   sudo -E su "$1"
