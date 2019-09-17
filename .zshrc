@@ -3,12 +3,9 @@ export TERM="xterm-256color" # for tmux
 # add linuxbrew and completions
 if [[ -d /home/linuxbrew ]]; then
   export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-  fpath+="$(brew --prefix)/share/zsh/site-functions"
 fi
 
-if [[ -d $HOME/.zfunc ]]; then
-  fpath+=$HOME/.zfunc
-fi
+source ~/.zsh/completions.zsh
 
 source "${HOME}/.zgen/zgen.zsh"
 
@@ -22,20 +19,8 @@ if ! zgen saved; then
   source "${HOME}/.zsh_plugins"
 fi
 
-# linuxbrew/homebrew
-if [ -x "$(command -v brew)" ]; then
-  source "$(brew --prefix chruby)/share/chruby/chruby.sh"
-  source "$(brew --prefix chruby)/share/chruby/auto.sh"
-
-  ASDF_DIR=$(brew --prefix asdf)
-  source $ASDF_DIR/asdf.sh
-  if [[ -f /usr/local/etc/bash_completion.d/asdf.bash ]]; then
-    source /usr/local/etc/bash_completion.d/asdf.bash
-  fi
-  if [[ -f /home/linuxbrew/.linuxbrew/etc/bash_completion.d/asdf.bash ]]; then
-    source /home/linuxbrew/.linuxbrew/etc/bash_completion.d/asdf.bash
-  fi
-fi
+source ~/.zsh/asdf.zsh
+source ~/.zsh/chruby.zsh
 
 # vim cli settings
 bindkey -v
@@ -56,12 +41,6 @@ bindkey '^?' backward-delete-char
 bindkey '^h' backward-delete-char
 bindkey '^w' backward-kill-word
 bindkey '^r' history-incremental-search-backward
-
-# chruby (work linux)
-if [[ -d /usr/local/chruby ]]; then
-  source /usr/local/chruby/chruby.sh
-  source /usr/local/chruby/auto.sh
-fi
 
 # rust
 if [[ -d "$HOME/.cargo/bin" ]]; then
@@ -84,10 +63,9 @@ export EDITOR=nvim
 export FZF_DEFAULT_OPTS='--height=50% --min-height=15 --reverse'
 export FZF_DEFAULT_CMD='fd --type f'
 
-command -v direnv] && eval "$(direnv hook zsh)"
+command -v direnv  && eval "$(direnv hook zsh)"
 [ -f ~/.zsh_work ] && source ~/.zsh_work
 
 source ~/.zsh/ag_helpers
 source ~/.zsh/git_helpers
-
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+source ~/.zsh/fzf.zsh
