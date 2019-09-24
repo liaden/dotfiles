@@ -179,6 +179,9 @@ endfunction
 command! -nargs=1 Bs :call BufSel("<args>")
 nnoremap Bs :Bs<Space>
 
+" ruby postfix conditional to wrapped
+nnoremap <leader>i <S-v>:s/\(\s*\)\(.*\)\s\(if\\|unless\)\s\(.*\)/\1\3 \4\r\1  \2\r\1end/<CR>zok
+
 set rtp+=/usr/local/Cellar/fzf/0.10.2/
 
 "disable hiding quotes around keys in json
