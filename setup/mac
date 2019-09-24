@@ -11,32 +11,36 @@ git clone --bare https://github.com/liaden/dotfiles $HOME/.cfg
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 config checkout
 config config --local status.showUntrackedFiles no
+
+# zsh plugin manager
 git clone https://github.com/tarjoilija/zgen.git "${HOME}/.zgen"
 
+brew install zsh bash pdsh gpg
+brew install direnv
+brew install tmux reattach-to-user-namespace
+brew install hub tig
+brew install fzf
+brew install chruby ruby-install
+brew install neovim/neovim/neovim
+brew install ctop htop glances
+brew install the_silver_searcher
+brew install xz
+brew install wget jq lynx
+brew install gnu-tar gnu-sed
+brew install shellcheck yamllint kubeval
+brew install fd
+brew install asdf rbenv ruby-build
+brew install openssl libyaml libffi       # ruby-build recommended
+brew install homebrew/cask-fonts/font-ubuntu-mono-derivative-powerline
 
-function brew_packages(){
-  brew install zsh bash pdsh gpg
-  brew install direnv
-  brew install tmux reattach-to-user-namespace
-  brew install hub tig
-  brew install fzf
-  brew install chruby ruby-install
-  brew install neovim/neovim/neovim
-  brew install ctop htop glances
-  brew install the_silver_searcher
-  brew install xz
-  brew install wget jq lynx
-  brew install gnu-tar gnu-sed
-  brew install shellcheck yamllint kubeval
-  brew install fd
-  brew install asdf rbenv ruby-build
-  brew install openssl libyaml libffi       # ruby-build recommended
-  brew install homebrew/cask-fonts/font-ubuntu-mono-derivative-powerline
-}
 
+asdf plugin-add postgres
+asdf plugin-add python
 asdf plugin-add ruby https://github.com/asdf-vm/asdf-ruby.git
 
 asdf plugin-add nodejs https://github.com/asdf-vm/asdf-nodejs.git
 bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring
+
+
 
 nvim +PlugInstall +qall
