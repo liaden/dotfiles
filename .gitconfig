@@ -34,6 +34,8 @@
 
     aliased = config --get-regexp ^alias\\.
 
+    root = !pwd
+
 [branch]
     autosetupmerge = always
     autosetuprebase = always
