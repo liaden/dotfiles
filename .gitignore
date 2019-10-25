@@ -26,6 +26,8 @@
 *.swo
 *.swn
 
+.envrc
+
 # Logs and databases #
 ######################
 *.log
