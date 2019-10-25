@@ -18,7 +18,7 @@ fi
 
 # if the init scipt doesn't exist
 if ! zgen saved; then
-  source "${HOME}/.zsh_plugins"
+  source "${HOME}/.zsh/plugins"
 fi
 
 source ~/.zsh/asdf.zsh
