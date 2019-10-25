@@ -7,7 +7,6 @@ zgen oh-my-zsh plugins/git
 zgen oh-my-zsh plugins/sudo
 zgen oh-my-zsh plugins/ruby
 zgen oh-my-zsh plugins/bundler
-zgen oh-my-zsh plugins/chruby
 zgen oh-my-zsh plugins/command-not-found
 
 #zgen load changyuheng/zsh-interactive-cd

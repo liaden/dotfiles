@@ -1,5 +1,7 @@
 export TERM="xterm-256color" # for tmux
 
+# zmodload zsh/zprof
+
 # add linuxbrew and completions
 if [[ -d /home/linuxbrew ]]; then
   export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
@@ -20,7 +22,6 @@ if ! zgen saved; then
 fi
 
 source ~/.zsh/asdf.zsh
-source ~/.zsh/chruby.zsh
 
 # vim cli settings
 bindkey -v
@@ -73,3 +74,5 @@ command -v direnv  && eval "$(direnv hook zsh)"
 source ~/.zsh/ag_helpers
 source ~/.zsh/git_helpers
 source ~/.zsh/fzf.zsh
+
+# zprof
