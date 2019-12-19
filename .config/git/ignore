@@ -43,3 +43,6 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# History Files: bash/zsh/psql/pry/redis-cli #
+.*hist*

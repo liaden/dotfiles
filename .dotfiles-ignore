@@ -1,0 +1,70 @@
+# Ignore dotfiles git folder
+.cfg
+
+# Ignore my extra folders
+dev
+*flamegraph*
+personal
+org
+records
+tmp
+
+# Ignore mac folders
+.account
+Applications
+Desktop
+Documents
+Downloads
+Library
+Movies
+Music
+Pictures
+Public
+
+# Language things
+go
+.asdf
+.cargo
+.rustup
+.bundle
+.gem
+*.gem
+.pry
+.pry.d
+.solargraph
+.node-gyp
+.npm
+.yarnrc
+
+# Chef
+.berkshelf
+
+# Don't leak private data
+.ssh
+.*hist*
+.gnupg
+.bardcfg
+
+# Work VPN
+.anyconnect
+.cisco
+
+# Messy transient config (autogen)
+.config/coc
+.config/htop
+.config/configstore   # update-notifier-npm.json
+.config/direnv
+.cache
+
+
+# Misc.
+.zcompdump*
+.lesshst
+.local
+.viminfo
+.ngrok
+.CFUserTextEncoding
+.subversion
+.viminfo
+.v8flags.*
+

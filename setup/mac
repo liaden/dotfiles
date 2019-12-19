@@ -10,7 +10,6 @@ brew isntall git
 git clone --bare https://github.com/liaden/dotfiles $HOME/.cfg
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 config checkout
-config config --local status.showUntrackedFiles no
 
 # zsh plugin manager
 git clone https://github.com/tarjoilija/zgen.git "${HOME}/.zgen"
@@ -40,7 +39,5 @@ asdf plugin-add ruby https://github.com/asdf-vm/asdf-ruby.git
 
 asdf plugin-add nodejs https://github.com/asdf-vm/asdf-nodejs.git
 bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring
-
-
 
 nvim +PlugInstall +qall
