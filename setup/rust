@@ -6,3 +6,17 @@ curl https://sh.rustup.rs -sSf | sh
 mkdir ~/.zfunc
 rustup completions zsh > ~/.zfunc/_rustup
 rustup completions zsh cargo > ~/.zfunc/_cargo
+
+# add components
+rustup component add rust-src
+rustup component add rustfmt
+rustup component add clippy
+
+cargo install cargo-watch
+
+# lang server for rust
+mkdir -p ~/dev
+pushd ~/dev
+git clone https://github.com/rust-analyzer/rust-analyzer; cd rust-analyzer
+cargo xtask install --server
+popd
