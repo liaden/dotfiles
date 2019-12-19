@@ -18,7 +18,7 @@ Plug 'kassio/neoterm'
 Plug 'rust-lang/rust.vim'
 Plug 'elzr/vim-json'
 Plug 'ingydotnet/yaml-vim'
-Plug 'skammer/vim-css-color'
+Plug 'ap/vim-css-color'
 
 " ruby
 Plug 'nelstrom/vim-textobj-rubyblock'
