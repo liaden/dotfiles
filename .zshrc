@@ -59,6 +59,7 @@ alias config="alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME
 setopt AUTO_CD                  # cd without explicit cd
 setopt HIST_IGNORE_SPACE        # prefixed ' ' filters command from history
 setopt EXTENDED_HISTORY         # save timestamp and duration
+setopt SHARE_HISTORY            # shares between concurrent sessions
 setopt HIST_FIND_NO_DUPS        # duplicates are still recorded but only one match on history
 setopt HIST_NO_STORE            # remove 'history ...' commands from history
 setopt HIST_REDUCE_BLANKS       # cleanup whitespace
