@@ -1,0 +1,5 @@
+--database=postgresql
+--skip-sprockets
+--skip-test
+--skip-system-test
+-m https://github.com/liaden/rails-template
