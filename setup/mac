@@ -4,7 +4,7 @@
 xcode-select --install
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-brew isntall git
+brew install git
 
 # dotfiles repo
 git clone --bare https://github.com/liaden/dotfiles $HOME/.cfg
