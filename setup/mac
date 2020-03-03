@@ -7,7 +7,8 @@ xcode-select --install
 brew install git
 
 # dotfiles repo
-git clone --bare https://github.com/liaden/dotfiles $HOME/.cfg
+rm "$HOME/.zshrc" # remove default zshrc from new macos version
+git clone --bare https://github.com/liaden/dotfiles "$HOME/.cfg"
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 config checkout
 

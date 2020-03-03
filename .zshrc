@@ -76,4 +76,5 @@ source ~/.zsh/ag_helpers
 source ~/.zsh/git_helpers
 source ~/.zsh/fzf.zsh
 
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 # zprof
