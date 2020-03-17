@@ -12,9 +12,9 @@ rustup component add rust-src
 rustup component add rustfmt
 rustup component add clippy
 
-cargo install cargo-watch
-cargo install topgrade
-cargo install cargo-update
+cargo install -j "$(nproc)" cargo-watch
+cargo install -j "$(nproc)" topgrade
+cargo install -j "$(nproc)" cargo-update
 
 # lang server for rust
 mkdir -p ~/dev
