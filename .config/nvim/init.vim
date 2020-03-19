@@ -180,7 +180,13 @@ command! -nargs=1 Bs :call BufSel("<args>")
 nnoremap Bs :Bs<Space>
 
 " ruby postfix conditional to wrapped
-nnoremap <leader>i <S-v>:s/\(\s*\)\(.*\)\s\(if\\|unless\)\s\(.*\)/\1\3 \4\r\1  \2\r\1end/<CR>zok
+" caputres: (indent)(code)(if|unless) (conditional)
+" places cursor on the first line of code
+nnoremap <leader>i <S-v>:s/\(\s*\)\(.*\)\s\(if\\|unless\)\s\(.*\)/\1\3 \4\r\1  \2\r\1end/<CR>zok:noh<CR>
+
+" undoes the above: replace three line if/unless conditional to postfix conditional one liner
+" caputres: (indent)(conditional)\n\s*(code)\n\s*end\n
+nnoremap <leader>I $?^\s*\<if\\|unless\><CR>0:.,.+2s/\(\s*\)\(.*\)\n\s*\(.*\)\n\s*end\n/\1\3 \2\r/<CR>k^:noh<CR>
 
 set rtp+=/usr/local/Cellar/fzf/0.10.2/
 
