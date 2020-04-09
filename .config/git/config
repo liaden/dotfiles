@@ -2,7 +2,7 @@
     editor = nvim
 
 [rerere]
-     enabled = 1
+    enabled = 1
     autoupdate = 1
 
 [rebase]
@@ -13,8 +13,20 @@
     s = status
     ff = merge --ff-only
 
+    ls = ls-files
+
+    # git churn | head
+    churn = !"f() { git log --all --find-copies --find-renames --name-only --format='format:' \"$@\" | awk 'NF{a[$0]++}END{for(i in a){print a[i], i}}' | sort -rn;};f"
+
     unstage = reset HEAD --
     stash-unstaged = status -k -uq
+    pristine = !git reset --hard && git clean -ffdx
+
+    expunge = !"f() { git filter-branch --force --index-filter \"git rm --cached --ignore-unmatch $1\" --prune-empty --tag-name-filter cat -- --all }; f"
+
+    branches = branch -a
+    statshes = stash list
+    tags = tag -n1 --list
 
     recent = branch --sort=committerdate
     rearrange = "rebase -i $(git merge-base HEAD @{u})"
@@ -29,6 +41,9 @@
     deletions = log --diff-filter=D
     on = "!f() { git log --since=$1 --until=${2:$1}; }; f"
 
+    ours   = !"f() { git checkout --ours $@ && git add $@; }; f"
+    theirs = !"f() { git checkout --theirs $@ && git add $@; }; f"
+
     cherries = cherry -v
     unpicked = "!f() { \
         _u=\"${1:-$(git rev-parse @{u} 2> /dev/null)}\"; \
@@ -37,6 +52,7 @@
 
     aliased = config --get-regexp ^alias\\.
 
+    exec = !exec
     root = !pwd
 
 [branch]
@@ -47,4 +63,3 @@
 
 [pull]
     rebase = true
-
