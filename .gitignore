@@ -52,9 +52,11 @@ go
 # Messy transient config (autogen)
 .config/coc
 .config/htop
-.config/configstore   # update-notifier-npm.json
+.config/configstore
 .config/direnv
+.config/nvim/plugged/
 .cache
+.iterm2*
 
 
 # Misc.
@@ -67,4 +69,6 @@ go
 .subversion
 .viminfo
 .v8flags.*
-
+.wget-hsts
+.docker
+.oracle*
