@@ -11,6 +11,8 @@ Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-surround'
 
+Plug 'wsdjeg/vim-fetch'
+
 " neoterm specific
 Plug 'kassio/neoterm'
 
