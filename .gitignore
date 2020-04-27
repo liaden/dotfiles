@@ -3,6 +3,7 @@
 
 # Ignore my extra folders
 dev
+src
 *flamegraph*
 personal
 org
@@ -31,6 +32,7 @@ go
 *.gem
 .pry
 .pry.d
+.rubies
 .solargraph
 .node-gyp
 .npm
