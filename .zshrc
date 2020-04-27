@@ -31,24 +31,7 @@ fi
 source ~/.zsh/asdf.zsh
 
 # vim cli settings
-bindkey -v
-
-# cause it is really only vi mode
-bindkey -a -s "diw" "bde"
-bindkey -a -s "daw" "bdw"
-bindkey -a -s "diW" "bdE"
-bindkey -a -s "daW" "bdW"
-
-# shorten latency when escaping to normal mode
-export KEYTIMEOUT=1
-
-# add other features back into vim cli mode
-bindkey '^P' up-history
-bindkey '^N' down-history
-bindkey '^?' backward-delete-char
-bindkey '^h' backward-delete-char
-bindkey '^w' backward-kill-word
-bindkey '^r' history-incremental-search-backward
+source ~/.zsh/vim.zsh
 
 # rust
 if [[ -d "$HOME/.cargo/bin" ]]; then
