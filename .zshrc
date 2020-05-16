@@ -65,6 +65,7 @@ command -v direnv  && eval "$(direnv hook zsh)"
 source ~/.zsh/ag_helpers
 source ~/.zsh/git_helpers
 source ~/.zsh/fzf.zsh
+source ~/.zsh/chruby.zsh
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
