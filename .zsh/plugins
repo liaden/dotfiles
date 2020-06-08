@@ -8,8 +8,12 @@ zgen oh-my-zsh plugins/sudo
 zgen oh-my-zsh plugins/ruby
 zgen oh-my-zsh plugins/bundler
 zgen oh-my-zsh plugins/command-not-found
+zgen oh-my-zsh plugins/docker
+zgen oh-my-zsh plugins/docker-compose
 
 #zgen load changyuheng/zsh-interactive-cd
+
+zgen load qoomon/zsh-lazyload
 
 zgen load zsh-users/zsh-syntax-highlighting
 
