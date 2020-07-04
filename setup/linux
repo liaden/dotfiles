@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+sudo apt-get update
+sudo apt-get install -y git
+
+# brew wants a confirmation before continuing
+echo -ne '\n' | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
 sudo apt-get install -y software-properties-common
 sudo apt-get update
 sudo apt-get install -y ctop tmux direnv
