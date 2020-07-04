@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-curl https://sh.rustup.rs -sSf | sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --profile default -y
+source "$HOME/.cargo/env"
 
 # completions
 mkdir ~/.zfunc
@@ -18,7 +19,8 @@ cargo install -j "$(nproc)" cargo-update
 
 # lang server for rust
 mkdir -p ~/dev
-pushd ~/dev
-git clone https://github.com/rust-analyzer/rust-analyzer; cd rust-analyzer
+pushd ~/dev || exit 1
+git clone https://github.com/rust-analyzer/rust-analyzer
+cd rust-analyzer || exit 1
 cargo xtask install --server
-popd
+popd || exit 1
