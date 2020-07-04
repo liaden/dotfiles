@@ -18,7 +18,7 @@ brew install git hub
 brew install neovim
 brew install asdf chruby ruby-install
 brew install fzf the_silver_searcher
-$(brew --prefix fzf)/opt/fzf/install
+$(brew --prefix fzf)/install
 
 asdf plugin-add nodejs https://github.com/asdf-vm/asdf-nodejs.git
 bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring

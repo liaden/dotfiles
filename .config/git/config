@@ -63,3 +63,7 @@
 
 [pull]
     rebase = true
+
+[user]
+	name = Joel Johnson
+	email = johnson.joel.b@gmail.com

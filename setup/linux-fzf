@@ -1,8 +1,0 @@
-sudo apt-get install -y make golang-1.10
-
-git clone https://github.com/junegunn/fzf /tmp/fzf
-
-pushd /tmp/fzf
-make && make install
-sudo cp bin/* /usr/bin/
-popd

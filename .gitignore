@@ -59,6 +59,11 @@ go
 .config/nvim/plugged/
 .cache
 .iterm2*
+.zgen
+
+# VMs
+.vagrant.d
+VirtualBox VMs
 
 
 # Misc.
