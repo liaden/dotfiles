@@ -18,16 +18,27 @@ brew install git hub
 brew install neovim
 brew install asdf chruby ruby-install
 brew install fzf the_silver_searcher
+brew install jq direnv
 $(brew --prefix fzf)/install
 
+# asdf
+
+asdf plugin-add postgres
+asdf plugin-add python
 asdf plugin-add nodejs https://github.com/asdf-vm/asdf-nodejs.git
 bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring
+
 asdf install nodejs 12.10.0
+asdf install postgres 12.1
+
+# vim/tmux plugin install
 
 nvim +silent +'PlugInstall --sync' +qall &> /dev/null < /dev/tty
 ~/.tmux/plugins/tpm/bin/install_plugins
 
 setup/rust
+
+brew install zsh && chsh -s "$(which zsh)"
 
 function configure_user() {
   echo "Coniguring user $1"
