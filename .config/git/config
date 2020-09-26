@@ -1,6 +1,9 @@
 [core]
     editor = nvim
 
+[log]
+  follow = true
+
 [rerere]
     enabled = 1
     autoupdate = 1
