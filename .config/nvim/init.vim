@@ -48,6 +48,7 @@ Plug 'kana/vim-textobj-user'
 Plug 'ntpeters/vim-better-whitespace'
 Plug 'scrooloose/nerdcommenter'
 Plug 'tmhedberg/matchit'
+Plug 'machakann/vim-highlightedyank'
 Plug 'junegunn/fzf'
 
 " colorschemes
