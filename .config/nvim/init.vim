@@ -39,7 +39,7 @@ Plug 'tmux-plugins/vim-tmux-focus-events'
 Plug 'roxma/vim-tmux-clipboard'
 
 " git
-Plug 'tpope/vim-fugitive', { 'tag': 'v2.5' }
+Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
 Plug 'rhysd/committia.vim'
 Plug 'junegunn/gv.vim'
@@ -50,6 +50,11 @@ Plug 'scrooloose/nerdcommenter'
 Plug 'tmhedberg/matchit'
 Plug 'machakann/vim-highlightedyank'
 Plug 'junegunn/fzf'
+
+Plug 'preservim/nerdtree'
+Plug 'ryanoasis/vim-devicons'
+Plug 'PhilRunninger/nerdtree-visual-selection'
+Plug 'Xuyuanp/nerdtree-git-plugin'
 
 " colorschemes
 Plug 'flazz/vim-colorschemes'
@@ -123,6 +128,18 @@ noremap <leader>pr :VipsqlSendRange<CR>
 noremap <leader>pl :VipsqlSendCurrentLine<CR>
 noremap <leader>pb :VipsqlSendBuffer<CR>
 noremap <leader>pc :VipsqlSendInterrupt<CR>
+
+" NERDTree configuration
+autocmd VimEnter * NERDTree | wincmd p          " open NERDTree when opening vim but without cursor focus
+autocmd BufWinEnter * silent NERDTreeMirror     " mirror NERDTREE across all tabs
+" autoclose if only NERDTree is let
+autocmd BufEnter * if tabpagenr('$') == 1 && winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() |
+    \ quit | endif
+
+nnoremap <leader>nt :NERDTreeToggle<CR>
+nnoremap <silent> <Leader>ng :NERDTreeFind<CR>
+
+let NERDTreeMinimalUI = 1
 
 " make regex behave sanely
 nnoremap / /\v
