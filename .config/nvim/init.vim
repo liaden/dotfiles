@@ -49,7 +49,10 @@ Plug 'ntpeters/vim-better-whitespace'
 Plug 'scrooloose/nerdcommenter'
 Plug 'tmhedberg/matchit'
 Plug 'machakann/vim-highlightedyank'
-Plug 'junegunn/fzf'
+Plug 'LeafCage/yankround.vim'
+
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'yuki-ycino/fzf-preview.vim', { 'branch': 'release/rpc' }
 
 Plug 'preservim/nerdtree'
 Plug 'ryanoasis/vim-devicons'
@@ -140,6 +143,13 @@ nnoremap <leader>nt :NERDTreeToggle<CR>
 nnoremap <silent> <Leader>ng :NERDTreeFind<CR>
 
 let NERDTreeMinimalUI = 1
+
+"FZF configuration
+nnoremap <leader>bs :CocCommand fzf-preview.Buffers<CR>
+nnoremap <leader>ff :CocCommand fzf-preview.ProjectFiles<CR>
+nnoremap <leader>fr :CocCommand fzf-preview.ProjectMruFiles<CR>
+nnoremap <leader>fq :CocCommand fzf-preview.QuickFix<CR>
+nnoremap <leader>fr :CocCommand fzf-preview.Yankround<CR>
 
 " make regex behave sanely
 nnoremap / /\v
