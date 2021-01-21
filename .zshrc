@@ -70,4 +70,6 @@ source ~/.zsh/chruby.zsh
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
 source ~/.zsh/p10k.zsh
+
+export PATH="$HOME/bin:$PATH"
 # zprof

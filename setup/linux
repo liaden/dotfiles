@@ -33,7 +33,7 @@ asdf install postgres 12.1
 
 # vim/tmux plugin install
 
-nvim +silent +'PlugInstall --sync' +qall &> /dev/null < /dev/tty
+./setup/neovim.sh
 ~/.tmux/plugins/tpm/bin/install_plugins
 
 setup/rust

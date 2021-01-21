@@ -6,3 +6,5 @@ pry-stack_explorer
 rubocop
 rubocop-performance
 rspec
+solargraph
+solargraph-rails

@@ -1,14 +1,5 @@
 {
-  "languageserver": {
-    "solargraph": {
-      "command": "solargraph",
-      "commandPath": "/Users/jjohnson10/.gem/ruby/2.6.2/bin/",
-      "filetypes": ["ruby"]
-    }
-  },
-    "rust": {
-      "command": "ra_lsp_server",
-      "filetypes": ["rust"],
-      "rootPatterns": ["Cargo.toml"]
-    }
+    "solargraph.useBundler": true,
+    "solargraph.checkGemVersion": false,
+    "solargraph.bundlerPath": "~/.asdf/shims/bundle"
 }
