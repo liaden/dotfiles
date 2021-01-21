@@ -134,7 +134,8 @@ noremap <leader>pc :VipsqlSendInterrupt<CR>
 
 " NERDTree configuration
 autocmd VimEnter * NERDTree | wincmd p          " open NERDTree when opening vim but without cursor focus
-autocmd BufWinEnter * silent NERDTreeMirror     " mirror NERDTREE across all tabs
+" TODO: causes ale linter to error on missing endif
+"autocmd BufWinEnter * silent NERDTreeMirror     " mirror NERDTREE across all tabs
 " autoclose if only NERDTree is let
 autocmd BufEnter * if tabpagenr('$') == 1 && winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() |
     \ quit | endif
