@@ -89,36 +89,6 @@ nnoremap <C-a><C-a> :b#<CR>
 
 set guifont=Ubuntu\ Mono\ 9
 
-function! BufSel(pattern)
-  let bufcount = bufnr("$")
-  let currbufnr = 1
-  let nummatches = 0
-  let firstmatchingbufnr = 0
-  while currbufnr <= bufcount
-    if(bufexists(currbufnr))
-      let currbufname = bufname(currbufnr)
-      if(match(currbufname, a:pattern) > -1)
-        echo currbufnr . ": ". bufname(currbufnr)
-        let nummatches += 1
-        let firstmatchingbufnr = currbufnr
-      endif
-    endif
-    let currbufnr = currbufnr + 1
-  endwhile
-  if(nummatches == 1)
-    execute ":buffer ". firstmatchingbufnr
-  elseif(nummatches > 1)
-    let desiredbufnr = input("Enter buffer number: ")
-    if(strlen(desiredbufnr) != 0)
-      execute ":buffer ". desiredbufnr
-    endif
-  else
-    echo "No matching buffers"
-  endif
-endfunction
-command! -nargs=1 Bs :call BufSel("<args>")
-nnoremap Bs :Bs<Space>
-
 " ruby postfix conditional to wrapped
 " caputres: (indent)(code)(if|unless) (conditional)
 " places cursor on the first line of code
@@ -142,24 +112,6 @@ set rnu
 set foldmethod=syntax
 set foldlevelstart=1
 
-" Zoom In/Out into another tab
-function! s:TabToggle() abort
-  if tabpagewinnr(tabpagenr(), '$') > 1
-    " Zoom in when this tab has more than one window
-    tab split
-  elseif tabpagenr('$') > 1
-    " Zoom out when this tab is not the last tab
-    if tabpagenr() < tabpagenr('$')
-      tabclose
-      tabprevious
-    else
-      tabclose
-    endif
-  endif
-endfunction
-command! TabToggle call s:TabToggle()
-nnoremap <leader>t :TabToggle<cr>
-
 " split bindings
 map <A-j> <C-W>j
 map <A-h> <C-W>h
@@ -177,10 +129,6 @@ let g:syntastic_check_on_wq = 0
 nnoremap $a :echo "Use A"<CR>
 nnoremap ^i :echo "Use I"<CR>
 
-"autocmd BufEnter [^_]*[^.][^.][^.][^.] execute ":source  ~/cpp.vim"
-"autocmd BufEnter *cpp execute ":source ~/cpp.vim"
-"autocmd BufEnter *xml execute ":source ~/xml.vim"
-"autocmd BufEnter *txt,*rtf execute ":source ~/txt.vim"
 au BufNewFile,BufRead *.js.erb      set filetype=javascript
 au BufNewFile,BufRead *.yaml,*.yml  setf yaml
 
