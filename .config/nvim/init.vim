@@ -54,36 +54,11 @@ set guioptions-=lbrLR
 " make basic controls easier to use
 let mapleader = " "
 
-" vipsql configuration -- vim postgres
-
-noremap <leader>po :VipsqlOpenSession<CR>
-noremap <silent> <leader>pk :VipsqlCloseSession<CR>
-nnoremap <leader>ps :VipsqlShell<CR>
-vnoremap <leader>ps :VipsqlSendSelection<CR>
-noremap <leader>pr :VipsqlSendRange<CR>
-noremap <leader>pl :VipsqlSendCurrentLine<CR>
-noremap <leader>pb :VipsqlSendBuffer<CR>
-noremap <leader>pc :VipsqlSendInterrupt<CR>
-
-" NERDTree configuration
-autocmd VimEnter * NERDTree | wincmd p          " open NERDTree when opening vim but without cursor focus
-" TODO: causes ale linter to error on missing endif
-"autocmd BufWinEnter * silent NERDTreeMirror     " mirror NERDTREE across all tabs
-" autoclose if only NERDTree is let
-autocmd BufEnter * if tabpagenr('$') == 1 && winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() |
-    \ quit | endif
-
-nnoremap <leader>nt :NERDTreeToggle<CR>
-nnoremap <silent> <Leader>ng :NERDTreeFind<CR>
-
-let NERDTreeMinimalUI = 1
-
-"FZF configuration
-nnoremap <leader>bs :CocCommand fzf-preview.Buffers<CR>
-nnoremap <leader>ff :CocCommand fzf-preview.ProjectFiles<CR>
-nnoremap <leader>fr :CocCommand fzf-preview.ProjectMruFiles<CR>
-nnoremap <leader>fq :CocCommand fzf-preview.QuickFix<CR>
-nnoremap <leader>fr :CocCommand fzf-preview.Yankround<CR>
+source $HOME/.config/nvim/vipsql.vim
+source $HOME/.config/nvim/nerdtree.vim
+source $HOME/.config/nvim/fzf.vim
+source $HOME/.config/nvim/coc.vim
+source $HOME/.config/nvim/colors.vim
 
 " make regex behave sanely
 nnoremap / /\v
@@ -167,28 +142,6 @@ set rnu
 set foldmethod=syntax
 set foldlevelstart=1
 
-if (has("termguicolors"))
- set termguicolors
-endif
-
-"colorshemes that I like
-"colors desert
-"colors asu1dark
-"colors camo
-"colors darkblue2
-"colors chocolateliquor
-"colors darkZ
-"colors darkbone
-"colors darkspectrum
-"colors dusk
-"colors earendel
-"colors herald
-let g:oceanic_next_terminal_bold = 1
-let g:oceanic_next_terminal_italic = 1
-colors OceanicNext
-
-hi CursorLine term=underline cterm=underline gui=underline
-
 " Zoom In/Out into another tab
 function! s:TabToggle() abort
   if tabpagewinnr(tabpagenr(), '$') > 1
@@ -207,8 +160,6 @@ endfunction
 command! TabToggle call s:TabToggle()
 nnoremap <leader>t :TabToggle<cr>
 
-highlight Folded guifg=grey
-
 " split bindings
 map <A-j> <C-W>j
 map <A-h> <C-W>h
@@ -221,7 +172,6 @@ let g:syntastic_auto_loc_list = 1
 let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
 
-source $HOME/.config/nvim/coc.vim
 
 " fix muscle memory
 nnoremap $a :echo "Use A"<CR>
