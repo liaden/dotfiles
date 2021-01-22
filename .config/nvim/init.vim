@@ -63,7 +63,17 @@ Plug 'Xuyuanp/nerdtree-git-plugin'
 Plug 'flazz/vim-colorschemes'
 Plug 'mhartington/oceanic-next'
 
+" language servers
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'neoclide/coc-css', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-json', {'do': 'yarn install --frozen-lockfile'}
+Plug 'fannheyward/coc-rust-analyzer', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-solargraph', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-tsserver', {'do': 'yarn install --frozen-lockfile'}
+
+Plug 'iamcco/coc-spell-checker', {'do': 'yarn install --frozen-lockfile'}
+Plug 'iamcco/coc-cspell-dicts', {'do': 'yarn install --frozen-lockfile'}
+
 
 " lint
 Plug 'w0rp/ale'
@@ -164,7 +174,7 @@ set showmatch
 set hlsearch
 nnoremap <leader><space> :noh<cr>
 
-" persist undos when closing vim
+" persist undoes when closing vim
 set undofile
 set undodir=~/tmp
 
@@ -287,6 +297,8 @@ let g:syntastic_always_populate_loc_list = 1
 let g:syntastic_auto_loc_list = 1
 let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
+
+source $HOME/.config/nvim/coc.vim
 
 " fix muscle memory
 nnoremap $a :echo "Use A"<CR>
