@@ -32,7 +32,7 @@ brew install fd
 brew install asdf rbenv ruby-build
 brew install openssl libyaml libffi       # ruby-build recommended
 brew install homebrew/cask-fonts/font-ubuntu-mono-derivative-powerline
-
+brew install --with-jansson --HEAD universal-ctags/universal-ctags/universal-ctags
 
 asdf plugin-add postgres
 asdf plugin-add python

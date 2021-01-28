@@ -15,8 +15,10 @@ call plug#begin()
 
 Plug 'junegunn/vim-plug'
 
+Plug 'liuchengxu/vista.vim'
+
 Plug 'tpope/vim-abolish'
-Plug 'tpope/vim-bundler'
+Plug 'tpope/vim-dispatch'
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-surround'
 
@@ -34,6 +36,9 @@ Plug 'ap/vim-css-color'
 " ruby
 Plug 'nelstrom/vim-textobj-rubyblock'
 Plug 'vim-ruby/vim-ruby'
+Plug 'tpope/vim-rake'
+Plug 'tpope/vim-bundler'
+Plug 'tpope/gem-browse'
 Plug 'tpope/vim-rails'
 
 Plug 'hashivim/vim-terraform'

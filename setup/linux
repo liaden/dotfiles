@@ -19,6 +19,7 @@ brew install neovim
 brew install asdf chruby ruby-install
 brew install fzf the_silver_searcher
 brew install jq direnv
+brew install --with-jansson --HEAD universal-ctags/universal-ctags/universal-ctags
 $(brew --prefix fzf)/install
 
 # asdf
