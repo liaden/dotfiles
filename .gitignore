@@ -3,6 +3,7 @@
 
 # Ignore my extra folders
 dev
+worskpace
 src
 *flamegraph*
 personal
@@ -12,6 +13,7 @@ tmp
 
 # Ignore mac folders
 .account
+.Trash
 Applications
 Desktop
 Documents
@@ -22,21 +24,25 @@ Music
 Pictures
 Public
 
-# Language things
+# Misc. Language things
 go
 .asdf
 .cargo
 .rustup
+.node-gyp
+.npm
+.yarnrc
+
+# ruby
+.yard
+.solargraph
 .bundle
 .gem
 *.gem
 .pry
 .pry.d
 .rubies
-.solargraph
-.node-gyp
-.npm
-.yarnrc
+
 
 # Chef
 .berkshelf
@@ -56,26 +62,35 @@ go
 .config/htop
 .config/configstore
 .config/direnv
-.config/nvim/plugged/
 .cache
 .iterm2*
-.zgen
+
+# vim/neovim
+.config/vim/yankround/history
+.config/nvim/plugged/
+.viminfo
+.nvimlog
+
 
 # VMs
 .vagrant.d
 VirtualBox VMs
 
 
-# Misc.
+# zsh
 .zcompdump*
+.zgen
+.zfunc
+
+
+# Misc.
 .lesshst
 .local
-.viminfo
 .ngrok
 .CFUserTextEncoding
 .subversion
-.viminfo
 .v8flags.*
 .wget-hsts
 .docker
 .oracle*
+.cups
