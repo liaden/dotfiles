@@ -24,14 +24,30 @@ Music
 Pictures
 Public
 
+# Ignore Linux folders
+.mozilla
+Desktop
+Documents
+Downloads
+Music
+Pictures
+Public
+Templates
+Videos
+
 # Misc. Language things
 go
 .asdf
-.cargo
-.rustup
+.cpan
+
+# node
 .node-gyp
 .npm
 .yarnrc
+
+# rust
+.cargo
+.rustup
 
 # ruby
 .yard
@@ -42,7 +58,6 @@ go
 .pry
 .pry.d
 .rubies
-
 
 # Chef
 .berkshelf
@@ -94,3 +109,4 @@ VirtualBox VMs
 .docker
 .oracle*
 .cups
+.sudo*
