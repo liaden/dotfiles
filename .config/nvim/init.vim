@@ -1,6 +1,7 @@
 set nocompatible
 filetype off
 
+source $HOME/.config/nvim/dotfiles.vim
 source $HOME/.config/nvim/plugins.vim
 
 "let g:syntastic_ruby_checkers = ['rubocop', 'mri']
@@ -75,7 +76,6 @@ nnoremap <leader><space> :noh<cr>
 " persist undoes when closing vim
 set undofile
 set undodir=~/tmp
-
 
 syntax on
 set nocp

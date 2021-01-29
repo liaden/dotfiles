@@ -44,7 +44,6 @@ fi
 
 alias git=hub
 alias vim=nvim
-alias config="alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'"
 
 setopt AUTO_CD                  # cd without explicit cd
 setopt HIST_IGNORE_SPACE        # prefixed ' ' filters command from history
