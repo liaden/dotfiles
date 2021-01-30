@@ -77,9 +77,9 @@ go
 .config/htop
 .config/configstore
 .config/direnv
+.config/tmux/plugins/*
 .cache
 .iterm2*
-.tmux/plugins/*
 
 # vim/neovim
 .config/vim/yankround/history
