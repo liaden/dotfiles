@@ -79,6 +79,7 @@ go
 .config/direnv
 .cache
 .iterm2*
+.tmux/plugins/*
 
 # vim/neovim
 .config/vim/yankround/history
