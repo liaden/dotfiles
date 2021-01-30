@@ -60,6 +60,7 @@ source $HOME/.config/nvim/nerdtree.vim
 source $HOME/.config/nvim/fzf.vim
 source $HOME/.config/nvim/coc.vim
 source $HOME/.config/nvim/colors.vim
+source $HOME/.config/nvim/terminal.vim
 
 " make regex behave sanely
 nnoremap / /\v
