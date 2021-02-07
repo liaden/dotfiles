@@ -1,7 +1,7 @@
-ASDF_DIR=$(brew --prefix asdf)
-source $ASDF_DIR/asdf.sh
-if [[ -f /home/linuxbrew/.linuxbrew/etc/bash_completion.d/asdf.bash ]]; then
-  source /home/linuxbrew/.linuxbrew/etc/bash_completion.d/asdf.bash
-elif [[ -f /usr/local/etc/bash_completion.d/asdf.bash ]]; then
-  source /usr/local/etc/bash_completion.d/asdf.bash
+if [[ -d /usr/local/opt/asdf ]]; then
+    export ASDF_DIR="/usr/local/opt/asdf"
+    source $ASDF_DIR/asdf.sh
+elif [[ -d /home/linuxbrew/.linuxbrew/opt/asdf ]]; then
+    export ASDF_DIR="/home/linuxbrew/.linuxbrew/opt/asdf"
+    source $ASDF_DIR/asdf.sh
 fi
