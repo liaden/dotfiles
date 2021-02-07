@@ -1,3 +1,5 @@
+# zmodload zsh/zprof
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -7,7 +9,7 @@ fi
 
 export TERM="xterm-256color" # for tmux
 
-# zmodload zsh/zprof
+source "${HOME}/.zgenom/zgenom.zsh"
 
 # add linuxbrew and completions
 if [[ -d /home/linuxbrew ]]; then
@@ -16,15 +18,13 @@ fi
 
 source ~/.zsh/completions.zsh
 
-source "${HOME}/.zgen/zgen.zsh"
-
 ## customize powerlevel9k theme
 if [[ "$(hostname)" == "CLM-JJOHNSON10.local" ]]; then
   export DEFAULT_USER="jjohnson10"
 fi
 
 # if the init scipt doesn't exist
-if ! zgen saved; then
+if ! zgenom saved; then
   source "${HOME}/.zsh/plugins"
 fi
 

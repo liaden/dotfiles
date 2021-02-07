@@ -95,8 +95,9 @@ VirtualBox VMs
 
 # zsh
 .zcompdump*
-.zgen
+.zgenom
 .zfunc
+.zwc
 
 
 # Misc.
