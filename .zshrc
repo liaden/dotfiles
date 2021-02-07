@@ -58,7 +58,7 @@ export EDITOR=nvim
 export FZF_DEFAULT_OPTS='--height=50% --min-height=15 --reverse'
 export FZF_DEFAULT_CMD='fd --type f'
 
-command -v direnv  && eval "$(direnv hook zsh)"
+command -v direnv > /dev/null  && eval "$(direnv hook zsh)"
 [ -f ~/.zsh_work ] && source ~/.zsh_work
 
 source ~/.zsh/ag_helpers
