@@ -62,6 +62,11 @@ go
 # Chef
 .berkshelf
 
+# DevOps
+.terraform.d
+.vault-token
+.aws
+
 # Don't leak private data
 .ssh
 .*hist*
