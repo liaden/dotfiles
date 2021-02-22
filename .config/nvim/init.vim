@@ -40,9 +40,6 @@ set splitbelow
 " Use zsh as the default vim shell
 set shell=zsh
 
-" Fix dropping out of terminal mode
-tnoremap <Esc> <C-\><C-n>
-
 " Save unwriteable files with sudo
 cmap w!! w !sudo tee > /dev/null %
 

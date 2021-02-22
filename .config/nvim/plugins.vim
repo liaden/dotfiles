@@ -26,6 +26,7 @@ Plug 'wsdjeg/vim-fetch'
 
 " neoterm specific
 Plug 'kassio/neoterm'
+Plug 'voldikss/vim-floaterm'
 
 " languages
 Plug 'rust-lang/rust.vim'

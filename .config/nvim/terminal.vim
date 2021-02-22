@@ -15,3 +15,9 @@ tnoremap <Esc> <C-\><C-n>
 
 autocmd TermOpen * startinsert
 autocmd TermEnter * startinsert
+
+" toggle terminal, similar to <c-z> to background vim
+nnoremap <leader>z FloatermToggle
+tnoremap <leader>z FloatermToggle
+
+let g:floaterm_autoclose = 1
