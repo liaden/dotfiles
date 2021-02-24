@@ -1,6 +1,14 @@
 \set QUIET 1
-\pset null '¤'
+
 \x auto
 \timing
+
+\set VERBOSITY verbose
 \set HISTFILE ~/.psql_history- :DBNAME
+\set HISTCONTROL ignoredups
+
+\pset null '¤'
+\pset linestyle unicode
+\pset border 2
+
 \unset QUIET
