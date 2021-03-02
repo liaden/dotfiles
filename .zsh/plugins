@@ -10,6 +10,7 @@ zgen oh-my-zsh plugins/bundler
 zgen oh-my-zsh plugins/command-not-found
 zgen oh-my-zsh plugins/docker
 zgen oh-my-zsh plugins/docker-compose
+zgen oh-my-zsh plugins/terraform
 
 #zgen load changyuheng/zsh-interactive-cd
 
