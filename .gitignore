@@ -81,6 +81,7 @@ go
 .config/coc
 .config/htop
 .config/configstore
+.config/dconf
 .config/direnv
 .config/tmux/plugins/*
 .cache
@@ -117,3 +118,5 @@ VirtualBox VMs
 .oracle*
 .cups
 .sudo*
+.xmonad/xmonad-*
+.xmonad/xmonad.hi
