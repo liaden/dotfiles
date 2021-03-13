@@ -118,5 +118,6 @@ VirtualBox VMs
 .oracle*
 .cups
 .sudo*
+.fehbg
 .xmonad/xmonad-*
 .xmonad/xmonad.hi
