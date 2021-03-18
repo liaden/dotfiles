@@ -43,6 +43,7 @@ Plug 'tpope/gem-browse'
 Plug 'tpope/vim-rails'
 
 Plug 'hashivim/vim-terraform'
+Plug 'pearofducks/ansible-vim'
 
 " sql
 Plug 'martingms/vipsql'
