@@ -127,6 +127,9 @@ let g:syntastic_check_on_wq = 0
 nnoremap $a :echo "Use A"<CR>
 nnoremap ^i :echo "Use I"<CR>
 
+" exit command without it staying in history
+cnoremap <esc> <c-e><c-u><c-c>
+
 au BufNewFile,BufRead *.js.erb      set filetype=javascript
 au BufNewFile,BufRead *.yaml,*.yml  setf yaml
 
