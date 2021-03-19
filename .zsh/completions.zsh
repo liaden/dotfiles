@@ -9,3 +9,5 @@ fi
 if [[ -d $HOME/.zfunc ]]; then
   fpath+=$HOME/.zfunc
 fi
+
+compdef _git config=git
