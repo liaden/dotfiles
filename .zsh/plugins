@@ -16,7 +16,7 @@ zgen oh-my-zsh plugins/terraform
 
 zgen load qoomon/zsh-lazyload
 
-zgen load zsh-users/zsh-syntax-highlighting
+zgen load zdharma/fast-syntax-highlighting
 
 # completions
 zgen load zsh-users/zsh-completions src
