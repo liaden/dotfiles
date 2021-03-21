@@ -319,6 +319,7 @@ myLogHook = return ()
 --
 -- By default, do nothing.
 myStartupHook = do
+  spawnOnce "exec ~/.xmonad/bin/align-monitors.sh"
   spawnOnce "exec ~/.xmonad/bin/bartoggle"
   spawnOnce "exec ~/.xmonad/bin/eww daemon"
   spawn "xsetroot -cursor_name left_ptr"
