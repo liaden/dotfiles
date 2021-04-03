@@ -6,8 +6,7 @@ dev
 worskpace
 src
 *flamegraph*
-personal
-org
+personal org
 records
 tmp
 
@@ -84,6 +83,13 @@ go
 .config/dconf
 .config/direnv
 .config/tmux/plugins/*
+.config/pulse
+.config/monitors.xml*
+.config/user-dirs*
+.config/gnome-*
+.config/gtk*
+.config/ibus
+.configls
 .cache
 .iterm2*
 
