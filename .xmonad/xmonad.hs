@@ -1,6 +1,5 @@
 --
 -- xmonad example config file.
---
 -- A template showing all available configuration hooks,
 -- and how to override the defaults in your own xmonad.hs conf file.
 --
@@ -97,14 +96,10 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- launch a terminal
     [ ((modm .|. shiftMask, xK_Return), spawn $ XMonad.terminal conf)
 
-    -- launch rofi and dashboard
+    -- launch rofi, dashboard, and sidebar
     , ((modm,               xK_o     ), spawn "~/.xmonad/bin/launcher.sh")
-    , ((modm,               xK_p     ), spawn "~/.xmonad/bin/centerlaunch")
-    , ((modm .|. shiftMask, xK_p     ), spawn "exec ~/.xmonad/bin/ewwclose")
-
-    -- launch eww sidebar
-    , ((modm,               xK_s     ), spawn "~/.xmonad/bin/sidebarlaunch")
-    , ((modm .|. shiftMask, xK_s     ), spawn "exec ~/.xmonad/bin/ewwclose")
+    , ((modm,               xK_p     ), spawn "~/.xmonad/bin/eww-toggle dashboard")
+    , ((modm,               xK_s     ), spawn "~/.xmonad/bin/eww-toggle sidebar")
 
     -- Audio keys
     , ((0,                    xF86XK_AudioPlay), spawn "playerctl play-pause")

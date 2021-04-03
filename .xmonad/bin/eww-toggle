@@ -1,0 +1,91 @@
+#!/usr/bin/env ruby
+
+require "set"
+
+SIDEBAR=%w[
+  weather_side
+  time_side
+  smol_calendar
+  player_side
+  sys_side
+  sliders_side
+]
+
+DASHBOARD=%w[
+  blur_full
+  weather
+  profile
+  quote
+  search_full
+  incognito-icon
+  vpn-icon
+  home_dir
+  screenshot
+  power_full
+  reboot_full
+  lock_full
+  logout_full
+  suspend_full
+]
+
+WINDOW_LIST={
+  dashboard: DASHBOARD,
+  sidebar: SIDEBAR,
+}
+
+def eww_windows
+  result = { open: [], closed: [] }
+
+  `eww windows`.split.map do |window|
+    if window[0] == '*'
+      result[:open] << window[1..]
+    else
+      result[:closed] << window
+    end
+  end
+
+  result
+end
+
+def eww_open(*windows)
+  `eww open-many #{windows.flatten.join(' ')}`
+end
+
+# closes all windows that are listed.
+# close-all closes everything that is open :(
+def eww_close(*windows)
+  windows.each do |window|
+    `eww close #{window}`
+  end
+end
+
+# toggles windows open and close
+# if anything is open, it just closes
+def eww_toggle(*windows)
+  state = eww_windows
+
+  windows = windows.flatten
+  if windows.to_set.intersection(state[:open]).any?
+    eww_close(*windows)
+  else
+    eww_open(*windows)
+  end
+end
+
+def window_list_arg
+  if ARGV.empty?
+    STDERR.puts "Must specify a window list: #{WINDOW_LIST.keys.join(" ")}"
+    exit 1
+  end
+
+  name = ARGV[0].to_sym
+  WINDOW_LIST[name].tap do |result|
+    if result.empty?
+      STDERR.puts "Unknown window list name: #{name}"
+      STDERR.puts "Valid choices: #{WINDOW_LIST.keys.join(" ")}"
+      exit 1
+    end
+  end
+end
+
+eww_toggle(window_list_arg)
