@@ -20,12 +20,16 @@ import XMonad.Hooks.ManageDocks
     ( avoidStruts, docks, manageDocks, Direction2D(D, L, R, U) )
 import XMonad.Hooks.ManageHelpers ( doFullFloat, isFullscreen )
 import XMonad.Layout.Spacing ( spacingRaw, Border(Border) )
+import XMonad.Layout.PerScreen
+import XMonad.Layout.Column
+import XMonad.Layout.ThreeColumns
 import XMonad.Layout.Gaps
     ( Direction2D(D, L, R, U),
       gaps,
       setGaps,
       GapMessage(DecGap, ToggleGaps, IncGap) )
 
+import XMonad.Layout.Column
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
 import Data.Maybe (maybeToList)
@@ -245,19 +249,8 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 ------------------------------------------------------------------------
 -- Layouts:
 
--- You can specify and transform your layouts by modifying these values.
--- If you change layout bindings be sure to use 'mod-shift-space' after
--- restarting (with 'mod-q') to reset your layout state to the new
--- defaults, as xmonad preserves your old layout settings by default.
---
--- The available layouts.  Note that each layout is separated by |||,
--- which denotes layout choice.
---
-myLayout = avoidStruts(tiled ||| Mirror tiled ||| Full)
+portraitLayout = avoidStruts(Column 1 ||| Mirror (ThreeColMid nmaster delta ratio)  ||| Full)
   where
-     -- default tiling algorithm partitions the screen into two panes
-     tiled   = Tall nmaster delta ratio
-
      -- The default number of windows in the master pane
      nmaster = 1
 
@@ -266,6 +259,36 @@ myLayout = avoidStruts(tiled ||| Mirror tiled ||| Full)
 
      -- Percent of screen to increment by when resizing panes
      delta   = 3/100
+
+--
+landscapeLayout =
+  avoidStruts(tiled ||| Mirror tiled ||| ThreeColMid nmaster delta ratio  ||| Full)
+  where
+     -- default tiling algorithm partitions the screen into two panes
+     tiled   = Tall nmaster delta ratio
+
+     -- The default number of windows in the master pane
+     nmaster = 1
+
+     -- Default proportion of screen occupied by master pane
+     ratio   = 3/5
+
+     -- Percent of screen to increment by when resizing panes
+     delta   = 3/100
+
+-- One vertical 4k monitor, 1 horizontal 4k monitor
+myLayout = gaps [(L,0), (R,0), (U,0), (D,0)] $
+            spacingRaw True screenBorder True windowBorder True $
+            smartBorders $
+            ifWider 3000 (landscapeLayout) portraitLayout
+  where
+    -- adds together with screenBorder for full spacing around layout
+    -- this gives proper offsets with the trays
+    screenGaps = [(L,30), (R,30), (U,40), (D,60)]
+
+    -- top bottom right left
+    windowBorder = Border 10 10 10 10
+    screenBorder = Border 40 60 10 10
 
 ------------------------------------------------------------------------
 -- Window rules:
@@ -359,7 +382,7 @@ defaults = def {
 
       -- hooks, layouts
         manageHook = myManageHook,
-        layoutHook = gaps [(L,30), (R,30), (U,40), (D,60)] $ spacingRaw True (Border 10 10 10 10) True (Border 10 10 10 10) True $ smartBorders $ myLayout,
+        layoutHook = myLayout,
         handleEventHook    = myEventHook,
         logHook            = myLogHook,
         startupHook        = myStartupHook >> addEWMHFullscreen
