@@ -45,7 +45,7 @@ cmap w!! w !sudo tee > /dev/null %
 
 set guioptions-=m
 set guioptions-=T
-set mouse-=a
+set mouse=a
 set guioptions+=lbrLR
 set guioptions-=lbrLR
 
