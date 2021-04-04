@@ -75,6 +75,8 @@ Plug 'ryanoasis/vim-devicons'
 Plug 'PhilRunninger/nerdtree-visual-selection'
 Plug 'Xuyuanp/nerdtree-git-plugin'
 
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install' }
+
 " colorschemes
 Plug 'flazz/vim-colorschemes'
 Plug 'mhartington/oceanic-next'
