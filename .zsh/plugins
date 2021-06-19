@@ -18,6 +18,9 @@ zgen load qoomon/zsh-lazyload
 
 zgen load zdharma/fast-syntax-highlighting
 
+# fzf extras
+zgen load pierpo/fzf-docker
+
 # completions
 zgen load zsh-users/zsh-completions src
 
