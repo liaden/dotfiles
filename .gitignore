@@ -31,6 +31,7 @@ Downloads
 Music
 Pictures
 Public
+snap
 Templates
 Videos
 
@@ -89,16 +90,19 @@ go
 .config/configstore
 .config/dconf
 .config/direnv
+.config/evolution
 .config/tmux/plugins/*
 .config/pulse
 .config/monitors.xml*
 .config/user-dirs*
 .config/gnome-*
 .config/gtk*
+.config/Slack
 .config/ibus
 .configls
 .cache
 .iterm2*
+.icons
 
 # vim/neovim
 .config/vim/yankround/history
@@ -117,6 +121,7 @@ VirtualBox VMs
 .zgenom
 .zfunc
 .zwc
+.bash*
 
 
 # Misc.
@@ -132,5 +137,8 @@ VirtualBox VMs
 .cups
 .sudo*
 .fehbg
+.pki
+
 .xmonad/xmonad-*
 .xmonad/xmonad.hi
+.xmonad/xmonad.o
