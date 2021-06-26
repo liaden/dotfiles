@@ -346,6 +346,7 @@ myStartupHook = do
   spawnOnce "picom -f"
   spawnOnce "greenclip daemon"
   spawnOnce "dunst"
+  spawnOnce "exec -merge ~/.Xresources"
 
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
