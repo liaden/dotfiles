@@ -24,6 +24,8 @@ Plug 'tpope/vim-surround'
 
 Plug 'wsdjeg/vim-fetch'
 
+Plug 'simnalamburt/vim-mundo'
+
 " neoterm specific
 Plug 'kassio/neoterm'
 Plug 'voldikss/vim-floaterm'

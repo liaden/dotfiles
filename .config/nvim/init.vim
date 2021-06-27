@@ -58,6 +58,7 @@ source $HOME/.config/nvim/fzf.vim
 source $HOME/.config/nvim/coc.vim
 source $HOME/.config/nvim/colors.vim
 source $HOME/.config/nvim/terminal.vim
+source $HOME/.config/nvin/mundo.vim
 
 " make regex behave sanely
 nnoremap / /\v
@@ -73,7 +74,7 @@ nnoremap <leader><space> :noh<cr>
 
 " persist undoes when closing vim
 set undofile
-set undodir=~/tmp
+set undodir=~/.cache/nvim/undo
 
 syntax on
 set nocp
