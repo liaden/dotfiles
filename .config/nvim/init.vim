@@ -58,7 +58,7 @@ source $HOME/.config/nvim/fzf.vim
 source $HOME/.config/nvim/coc.vim
 source $HOME/.config/nvim/colors.vim
 source $HOME/.config/nvim/terminal.vim
-source $HOME/.config/nvin/mundo.vim
+source $HOME/.config/nvim/mundo.vim
 
 " make regex behave sanely
 nnoremap / /\v
