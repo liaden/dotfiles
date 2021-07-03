@@ -24,6 +24,11 @@ return require('packer').startup({function()
 
   use 'simnalamburt/vim-mundo'
 
+  use {
+    'nvim-telescope/telescope.nvim',
+    requires = {{ 'nvim-lua/popup.nvim' }, { 'nvim-lua/plenary.nvim' }}
+  }
+
   -- neoterm specific
   use 'kassio/neoterm'
   use 'voldikss/vim-floaterm'

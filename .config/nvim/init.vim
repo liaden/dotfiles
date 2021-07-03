@@ -54,7 +54,7 @@ let mapleader = " "
 
 source $HOME/.config/nvim/vipsql.vim
 source $HOME/.config/nvim/nerdtree.vim
-source $HOME/.config/nvim/fzf.vim
+source $HOME/.config/nvim/telescope.vim
 source $HOME/.config/nvim/coc.vim
 source $HOME/.config/nvim/colors.vim
 source $HOME/.config/nvim/terminal.vim
