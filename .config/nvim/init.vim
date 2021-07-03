@@ -2,7 +2,7 @@ set nocompatible
 filetype off
 
 source $HOME/.config/nvim/dotfiles.vim
-source $HOME/.config/nvim/plugins.vim
+lua require('plugins')
 
 "let g:syntastic_ruby_checkers = ['rubocop', 'mri']
 let g:ale_open_list        = 1
