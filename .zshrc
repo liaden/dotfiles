@@ -55,8 +55,8 @@ setopt HIST_REDUCE_BLANKS       # cleanup whitespace
 setopt INC_APPEND_HISTORY_TIME  # add commands to history after command finishes rather than session end
 
 export EDITOR=nvim
-export FZF_DEFAULT_OPTS='--height=50% --min-height=15 --reverse'
-export FZF_DEFAULT_CMD='fd --type f'
+export MANPAGER='nvim +Man!'
+export MANWIDTH=999
 
 command -v direnv > /dev/null  && eval "$(direnv hook zsh)"
 [ -f ~/.zsh_work ] && source ~/.zsh_work
