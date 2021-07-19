@@ -10,7 +10,7 @@ end
 
 vim.cmd [[packadd packer.nvim]]
 
-return require('packer').startup(function()
+return require('packer').startup({function()
   use 'wbthomason/packer.nvim'
 
   use 'liuchengxu/vista.vim'
@@ -85,4 +85,10 @@ return require('packer').startup(function()
   use 'flazz/vim-colorschemes'
   use 'mhartington/oceanic-next'
 
-end)
+end,
+config = {
+  display = {
+    open_fn = require('packer.util').float,
+  }
+}
+})
