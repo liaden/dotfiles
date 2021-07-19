@@ -29,6 +29,10 @@ return require('packer').startup({function()
     requires = {{ 'nvim-lua/popup.nvim' }, { 'nvim-lua/plenary.nvim' }}
   }
 
+  use 'neovim/nvim-lspconfig'
+  use { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
+  use 'hrsh7th/nvim-compe'
+
   -- neoterm specific
   use 'kassio/neoterm'
   use 'voldikss/vim-floaterm'

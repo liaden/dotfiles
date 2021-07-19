@@ -55,7 +55,9 @@ let mapleader = " "
 source $HOME/.config/nvim/vipsql.vim
 source $HOME/.config/nvim/nerdtree.vim
 source $HOME/.config/nvim/telescope.vim
-source $HOME/.config/nvim/coc.vim
+lua require('lsp-config')
+lua require('treesitter-config')
+lua require('completion')
 source $HOME/.config/nvim/colors.vim
 source $HOME/.config/nvim/terminal.vim
 source $HOME/.config/nvim/mundo.vim
