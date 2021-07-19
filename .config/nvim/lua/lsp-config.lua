@@ -34,30 +34,19 @@ local on_attach = function(client, bufnr)
   end
 end
 
-nvim_lsp.rust_analyzer.setup({
-  on_attach = on_attach,
-  settings = {
-    ["rust-analyzer"] = {
-      assist = {
-       importGranularity = "module",
-       importPrefix = "by_self",
-      },
-      cargo = {
-        loadOutDirsFromCheck = true
-      },
-      procMacro = {
-        enable = true
-      },
-      experimental = {
-        procAttrMacros = true
-      },
-    }
-  }
-})
+local function setup_servers()
+  require'lspinstall'.setup()
+  local servers = require'lspinstall'.installed_servers()
 
-local servers = { 'bashls', 'dockerls', 'solargraph', 'tsserver', 'terraformls', 'vimls' }
-for _, lsp in ipairs(servers) do
-  nvim_lsp[lsp].setup {
-    on_attach = on_attach,
-  }
+  for _, server in pairs(servers) do
+    require'lspconfig'[server].setup{}
+  end
+end
+
+setup_servers()
+
+-- Automatically reload after `:LspInstall <server>` so we don't have to restart neovim
+require'lspinstall'.post_install_hook = function ()
+  setup_servers()
+  vim.cmd("bufdo e")
 end
