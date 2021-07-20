@@ -61,6 +61,7 @@ lua require('completion')
 source $HOME/.config/nvim/colors.vim
 source $HOME/.config/nvim/terminal.vim
 source $HOME/.config/nvim/mundo.vim
+source $HOME/.config/nvim/spell.vim
 
 " make regex behave sanely
 nnoremap / /\v
