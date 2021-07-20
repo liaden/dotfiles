@@ -32,6 +32,7 @@ return require('packer').startup({function()
   use 'neovim/nvim-lspconfig'
   use 'kabouzeid/nvim-lspinstall'
   use { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
+  use 'nvim-treesitter/playground'
   use 'hrsh7th/nvim-compe'
 
   -- neoterm specific
