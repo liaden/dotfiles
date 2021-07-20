@@ -1,7 +1,9 @@
 if [ -x "$(command -v brew)" ]; then
-  if [[ -f /usr/local/share/zsh/site-functions ]]; then
+  if [[ -d /usr/local/share/zsh/site-functions ]]; then
     fpath+="/usr/local/share/zsh/site-functions"
-  elif [[ -f /home/linuxbrew/.linuxbrew/share/zsh/site-functions ]]; then
+  fi
+
+  if [[ -d /home/linuxbrew/.linuxbrew/share/zsh/site-functions ]]; then
     fpath+="/home/linuxbrew/.linuxbrew/share/zsh/site-functions"
   fi
 fi
