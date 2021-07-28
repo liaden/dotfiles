@@ -37,6 +37,8 @@ set laststatus=2
 set splitright
 set splitbelow
 
+set timeoutlen=250
+
 " Use zsh as the default vim shell
 set shell=zsh
 

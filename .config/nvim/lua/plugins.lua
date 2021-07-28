@@ -92,6 +92,13 @@ return require('packer').startup({function()
     cmd = 'MarkdownPreview'
   }
 
+  use {
+      "folke/which-key.nvim",
+      config = function() require("which-key").setup {
+        }
+      end
+  }
+
   ---- colorschemes
   use 'flazz/vim-colorschemes'
   use 'mhartington/oceanic-next'
