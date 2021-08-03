@@ -65,6 +65,11 @@ return require('packer').startup({function()
   use 'tmux-plugins/vim-tmux-focus-events'
   use 'roxma/vim-tmux-clipboard'
 
+  -- pair programming stuff
+  use 'sunjon/Shade.nvim'
+  use 'folke/twilight.nvim'
+  use 'machakann/vim-highlightedyank'
+
   -- git
   use 'tpope/vim-fugitive'
   use 'airblade/vim-gitgutter'
@@ -75,7 +80,6 @@ return require('packer').startup({function()
   use 'ntpeters/vim-better-whitespace'
   use 'scrooloose/nerdcommenter'
   use 'tmhedberg/matchit'
-  use 'machakann/vim-highlightedyank'
   use 'LeafCage/yankround.vim'
 
   --use { 'junegunn/fzf', cmd = function() vim.fn['fzf#install']() end }
