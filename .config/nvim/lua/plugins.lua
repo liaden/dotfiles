@@ -38,6 +38,9 @@ return require('packer').startup({function()
   -- neoterm specific
   use 'kassio/neoterm'
   use 'voldikss/vim-floaterm'
+  use 'kamykn/popup-menu.nvim'
+
+  use 'kamykn/spelunker.vim'
 
   -- languages
   use 'rust-lang/rust.vim'
