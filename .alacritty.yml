@@ -65,7 +65,7 @@ colors:
     - { index: 20, color: '0xb2ccd6' }
     - { index: 21, color: '0xeeffff' }
 
-background_opacity: 1
+background_opacity: 0.75
 
 # cursor:
 #   style: Underline
@@ -78,3 +78,5 @@ key_bindings:
   - { key: Key0, mods: Control, action: ResetFontSize }
   - { key: Equals, mods: Control, action: IncreaseFontSize }
   - { key: Minus, mods: Control, action: DecreaseFontSize }
+  - { key: Return,   mods: Shift,   chars: "\x1b[13;2u" }
+  - { key: Return,   mods: Control, chars: "\x1b[13;5u" }
