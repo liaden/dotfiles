@@ -1,8 +1,10 @@
+vim.o.completeopt = "menuone,noselect"
+
 require'compe'.setup {
   enabled = true;
   autocomplete = true;
   debug = false;
-  min_length = 3;
+  min_length = 2;
   preselect = 'enable';
   throttle_time = 80;
   source_timeout = 200;
@@ -28,7 +30,12 @@ require'compe'.setup {
     nvim_lsp = true;
     nvim_lua = true;
     vsnip = false;
-    ultisnips = false;
+    ultisnips = true;
     luasnip = false;
   };
 }
+
+vim.api.nvim_set_keymap("i", "<Tab>", "compe#confirm({ 'keys': '<CR>', 'select': v:true })", { expr = true })
+vim.api.nvim_set_keymap("i", "<S-Tab>", "compe#complete()", { expr = true })
+--vim.api.nvim_set_keymap("i", "<S-CR>", "compe#confirm({ 'keys': '<CR>', 'select': v:true })", { expr = true })
+--vim.api.nvim_set_keymap("i", "<C-Space>", "compe#complete()", { expr = true })

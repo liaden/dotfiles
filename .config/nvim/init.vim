@@ -1,6 +1,5 @@
 set nocompatible
 filetype off
-
 source $HOME/.config/nvim/dotfiles.vim
 lua require('plugins')
 
@@ -103,8 +102,6 @@ nnoremap <leader>i <S-v>:s/\(\s*\)\(.*\)\s\(if\\|unless\)\s\(.*\)/\1\3 \4\r\1  \
 " caputres: (indent)(conditional)\n\s*(code)\n\s*end\n
 nnoremap <leader>I $?^\s*\<if\\|unless\><CR>0:.,.+2s/\(\s*\)\(.*\)\n\s*\(.*\)\n\s*end\n/\1\3 \2\r/<CR>k^:noh<CR>
 
-set rtp+=/usr/local/Cellar/fzf/0.10.2/
-
 "disable hiding quotes around keys in json
 let g:vim_json_syntax_conceal=0
 
@@ -114,7 +111,8 @@ autocmd FileType ruby set sw=2 sts=2 et
 "set colorcolumn=80,120
 set rnu
 
-set foldmethod=syntax
+set foldmethod=expr
+set foldexpr=nvim_treesitter#foldexpr()
 set foldlevelstart=1
 
 " split bindings

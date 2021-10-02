@@ -9,4 +9,7 @@ require'nvim-treesitter.configs'.setup {
   folding = {
     enable = true,
   },
+  playground = {
+    enable = true,
+  },
 }

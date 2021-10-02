@@ -32,14 +32,57 @@ local on_attach = function(client, bufnr)
   elseif client.resolved_capabilities.document_range_formatting then
     buf_set_keymap("n", "<leader>=", "<cmd>lua vim.lsp.buf.formatting()<CR>", opts)
   end
+
+  -- Set autocommands conditional on server_capabilities
+  if client.resolved_capabilities.document_highlight then
+    vim.api.nvim_exec([[
+    augroup lsp_document_highlight
+    autocmd! * <buffer>
+    autocmd CursorHold <buffer> lua vim.lsp.buf.document_highlight()
+    autocmd CursorMoved <buffer> lua vim.lsp.buf.clear_references()
+    augroup END
+    ]], false)
+  end
+end
+
+local function make_config()
+  local capabilities = vim.lsp.protocol.make_client_capabilities()
+  capabilities.textDocument.completion.completionItem.snippetSupport = true
+  return {
+    -- enable snippet support
+    capabilities = capabilities,
+    -- map buffer local keybindings when the language server attaches
+    on_attach = on_attach,
+  }
 end
 
 local function setup_servers()
   require'lspinstall'.setup()
   local servers = require'lspinstall'.installed_servers()
 
+  -- manually managed servers
+  table.insert(servers, "solargraph")
+
   for _, server in pairs(servers) do
-    require'lspconfig'[server].setup{}
+    local config = make_config()
+
+    if server == "solargraph" then
+      config.settings = {
+        solargraph = {
+          diagnostics = true,
+          completion = true,
+          definitions = true,
+          folding = true,
+          hover = true,
+          references = true,
+          symbols = true,
+          useBundler = true,
+          bundlerPath = "/home/joel/.asdf/shims/bundle"
+        }
+      }
+    end
+
+    require'lspconfig'[server].setup(config)
   end
 end
 
