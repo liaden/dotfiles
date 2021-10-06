@@ -13,3 +13,5 @@ nnoremap <leader>gs <cmd>Telescope git_status
 nnoremap <leader>gh <cmd>Telescope git_bcommits
 
 nnoremap <leader>cs <cmd>Telescope command_history<cr>
+
+autocmd FileType TelescopePrompt lua require('cmp').setup.buffer { enabled = false }

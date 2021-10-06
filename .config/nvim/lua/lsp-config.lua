@@ -46,16 +46,13 @@ local on_attach = function(client, bufnr)
 end
 
 local function make_config()
-  local capabilities = vim.lsp.protocol.make_client_capabilities()
-  capabilities.textDocument.completion.completionItem.snippetSupport = true
+  local capabilities = require'cmp_nvim_lsp'.update_capabilities(vim.lsp.protocol.make_client_capabilities())
+
   return {
-    -- enable snippet support
     capabilities = capabilities,
-    -- map buffer local keybindings when the language server attaches
     on_attach = on_attach,
   }
 end
-
 local function setup_servers()
   require'lspinstall'.setup()
   local servers = require'lspinstall'.installed_servers()
