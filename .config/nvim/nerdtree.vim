@@ -1,4 +1,10 @@
-autocmd VimEnter * NERDTreeVCS | wincmd p          " open NERDTree when opening vim but without cursor focus
+augroup IsNotGitCommit
+  autocmd!
+  autocmd VimEnter * NERDTreeVCS | wincmd p          " open NERDTree when opening vim but without cursor focus
+augroup END
+
+autocmd BufRead COMMIT_EDITMSG autocmd! IsNotGitCommit
+
 " TODO: causes ale linter to error on missing endif
 "autocmd BufWinEnter * silent NERDTreeMirror     " mirror NERDTREE across all tabs
 " autoclose if only NERDTree is let
