@@ -30,10 +30,13 @@ return require('packer').startup({function()
   }
 
   use 'neovim/nvim-lspconfig'
-  use 'kabouzeid/nvim-lspinstall'
+  use 'williamboman/nvim-lsp-installer'
   use { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
   use 'nvim-treesitter/playground'
   use 'onsails/lspkind-nvim'
+
+  use { 'weilbith/nvim-code-action-menu', cmd = 'CodeActionMenu' }
+  use 'kosayoda/nvim-lightbulb'
 
   use 'hrsh7th/cmp-nvim-lsp'
   use 'hrsh7th/cmp-buffer'

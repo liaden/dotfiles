@@ -53,17 +53,40 @@ local function make_config()
     on_attach = on_attach,
   }
 end
+
 local function setup_servers()
-  require'lspinstall'.setup()
-  local servers = require'lspinstall'.installed_servers()
+  vim.lsp.set_log_level("debug")
+  local lsp_installer = require("nvim-lsp-installer")
+  local servers = {
+    -- "ansiblels",
+    "bashls",
+    "cssls",
+    "eslint",
+    "html",
+    -- "gopls",
+    "rust_analyzer",
+    "solargraph",
+    "tailwindcss",
+    "terraformls",
+    "tflint",
+    "vimls",
+    "yamlls",
+  }
 
-  -- manually managed servers
-  table.insert(servers, "solargraph")
+  for _, name in pairs(servers) do
+    local ok, server = lsp_installer.get_server(name)
+    if ok then
+      if not server:is_installed() then
+        print("Installing " .. name)
+        server:install()
+      end
+    end
+  end
 
-  for _, server in pairs(servers) do
+  lsp_installer.on_server_ready(function(server)
     local config = make_config()
 
-    if server == "solargraph" then
+    if server.name == "solargraph" then
       config.settings = {
         solargraph = {
           diagnostics = true,
@@ -77,16 +100,24 @@ local function setup_servers()
           bundlerPath = "/home/joel/.asdf/shims/bundle"
         }
       }
+    elseif server.name == "tailwindcss" then
+      config.settings = {
+        tailwindCSS = {
+          experimental = {
+            classRegex = {  -- for haml :D
+              "%\\w+([^\\s]*)",
+              "\\.([^\\.]*)",
+              ":class\\s*=>\\s*\"([^\"]*)",
+              "class:\\s+\"([^\"]*)"
+            }
+          }
+        }
+      }
     end
 
-    require'lspconfig'[server].setup(config)
-  end
+    server:setup(config)
+    vim.cmd([[ do User LspAttachBuffers ]])
+  end)
 end
 
 setup_servers()
-
--- Automatically reload after `:LspInstall <server>` so we don't have to restart neovim
-require'lspinstall'.post_install_hook = function ()
-  setup_servers()
-  vim.cmd("bufdo e")
-end
