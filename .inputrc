@@ -1,6 +1,8 @@
 set editing-mode vi
-set show-mode-in-prompt on
+set show-mode-in-prompt On
 
+# Set cursor to bar on insert, and box on command mode
+# https://wiki.archlinux.org/title/Readline#Different_cursor_shapes_for_each_mode
 $if term=linux
 	set vi-ins-mode-string "\1\e[?0c\2"
 	set vi-cmd-mode-string "\1\e[?8c\2"
@@ -8,3 +10,17 @@ $else
 	set vi-ins-mode-string "\1\e[6 q\2"
 	set vi-cmd-mode-string "\1\e[2 q\2"
 $endif
+
+# single tab: partial completion + possible completions
+set show-all-if-ambiguous On
+
+# Allow UTF-8 input and output, instead of showing stuff like $'\0123\0456'
+set input-meta On
+set output-meta On
+set convert-meta Off
+
+"\C-a": beginning-of-line
+"\C-e": end-of-line
+"\C-l": clear-screen
+"\C-u": kill-whole-line
+

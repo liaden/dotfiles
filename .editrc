@@ -1,1 +1,15 @@
+bind -v
+
+bind \\t rl_complete
+
+bind "^A" ed-move-to-beg
+bind "^E" ed-move-to-end
+bind "^K" ed-kill-line
+bind "^L" ed-clear-screen
+bind "^N" ed-search-next-history
+bind "^P" ed-search-prev-history
 bind "^R" em-inc-search-prev
+bind "^U" em-kill-line
+bind "^W" ed-delete-prev-word
+
+
