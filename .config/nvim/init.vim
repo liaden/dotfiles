@@ -64,6 +64,7 @@ source $HOME/.config/nvim/colors.vim
 source $HOME/.config/nvim/terminal.vim
 source $HOME/.config/nvim/mundo.vim
 source $HOME/.config/nvim/spell.vim
+source $HOME/.config/nvim/tmux.vim
 
 " make regex behave sanely
 nnoremap / /\v
@@ -114,12 +115,6 @@ set rnu
 set foldmethod=expr
 set foldexpr=nvim_treesitter#foldexpr()
 set foldlevelstart=1
-
-" split bindings
-map <A-j> <C-W>j
-map <A-h> <C-W>h
-map <A-k> <C-W>k
-map <A-l> <C-W>l
 
 " syntastic
 let g:syntastic_always_populate_loc_list = 1
