@@ -60,6 +60,7 @@ lua require('lsp-config')
 lua require('treesitter-config')
 lua require('completion')
 lua require('pairing')
+source $HOME/.config/nvim/firenvim.vim
 source $HOME/.config/nvim/colors.vim
 source $HOME/.config/nvim/terminal.vim
 source $HOME/.config/nvim/mundo.vim
