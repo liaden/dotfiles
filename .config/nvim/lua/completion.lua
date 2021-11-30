@@ -22,6 +22,7 @@ cmp.setup({
     { name = 'nvim_lsp' },
     { name = 'luasnip' },
     { name = 'buffer' },
+    { name = 'path' },
   },
   completion = {
     completopt = 'menu,menuone,noinsert',
@@ -40,6 +41,18 @@ cmp.setup({
   }
 })
 
+cmp.setup.cmdline('/', {
+  sources = {
+    { name = 'buffer' },
+  }
+})
+
+cmp.setup.cmdline(':', {
+  sources = cmp.config.sources(
+    {{ name = 'path' }},
+    {{ name = 'cmdline' }}
+  )
+})
 
 --vim.api.nvim_set_keymap("i", "<Tab>", "compe#confirm({ 'keys': '<CR>', 'select': v:true })", { expr = true })
 --vim.api.nvim_set_keymap("i", "<S-Tab>", "compe#complete()", { expr = true })
