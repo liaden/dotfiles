@@ -22,7 +22,7 @@ font:
   bold_italic:
     family: FiraCode Nerd Font
 
-  size: 9
+  size: 8
 
 colors:
   # Default colors
