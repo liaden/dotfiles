@@ -11,6 +11,8 @@ import XMonad.Layout.Fullscreen
 import Data.Monoid ()
 import System.Exit ()
 import XMonad.Util.SpawnOnce ( spawnOnce )
+import XMonad.Util.NamedScratchpad
+import XMonad.Actions.Submap
 import Graphics.X11.ExtraTypes.XF86 (xF86XK_AudioLowerVolume, xF86XK_AudioRaiseVolume, xF86XK_AudioMute, xF86XK_MonBrightnessDown, xF86XK_MonBrightnessUp, xF86XK_AudioPlay, xF86XK_AudioPrev, xF86XK_AudioNext)
 import XMonad.Hooks.EwmhDesktops ( ewmh )
 import Control.Monad ( join, when )
@@ -100,6 +102,12 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm,               xK_o     ), spawn "~/.xmonad/bin/launcher.sh")
     , ((modm,               xK_p     ), spawn "~/.xmonad/bin/eww-toggle dashboard")
     , ((modm,               xK_s     ), spawn "~/.xmonad/bin/eww-toggle sidebar")
+
+    -- scratchpads
+    , ((modm, xK_f), submap . M.fromList $
+        [ ((0, xK_m),                   namedScratchpadAction scratchpads "music")
+        , ((0, xK_s),                   namedScratchpadAction scratchpads "slack")
+        ])
 
     -- Audio keys
     , ((0,                    xF86XK_AudioPlay), spawn "playerctl play-pause")
@@ -241,6 +249,22 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
     -- you may also bind events to the mouse scroll wheel (button4 and button5)
     ]
 
+-- scratch pads
+scratchpads = [ music, slack ]
+  where
+    music = NS "music" spawn find manage
+      where
+
+        spawn = "flatpak run io.github.Pithos"
+        find = className =? "Pithos"
+        manage = customFloating $ rectCentered 0.8
+
+    slack = NS "slack"  spawn find manage
+      where
+        spawn = "slack"
+        find = className=? "Slack"
+        manage = customFloating $ rectCentered 0.8
+
 ------------------------------------------------------------------------
 -- Layouts:
 
@@ -285,6 +309,11 @@ myLayout = gaps [(L,0), (R,0), (U,0), (D,0)] $
     windowBorder = Border 10 10 10 10
     screenBorder = Border 40 60 10 10
 
+rectCentered :: Rational -> W.RationalRect
+rectCentered percentage = W.RationalRect offset offset percentage percentage
+  where
+    offset = (1 - percentage) / 2
+
 ------------------------------------------------------------------------
 -- Window rules:
 
@@ -300,13 +329,13 @@ myLayout = gaps [(L,0), (R,0), (U,0), (D,0)] $
 -- To match on the WM_NAME, you can use 'title' in the same way that
 -- 'className' and 'resource' are used below.
 --
-myManageHook = fullscreenManageHook <+> manageDocks <+> composeAll
+myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+> manageDocks <+> composeAll
     [ className =? "MPlayer"        --> doFloat
     , className =? "Gimp"           --> doFloat
     , resource  =? "desktop_window" --> doIgnore
     , resource  =? "kdesktop"       --> doIgnore
     , isFullscreen --> doFullFloat
-                                 ]
+    ]
 
 ------------------------------------------------------------------------
 -- Event handling
