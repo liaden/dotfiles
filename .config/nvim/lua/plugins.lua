@@ -20,6 +20,9 @@ vim.cmd [[packadd packer.nvim]]
 return require('packer').startup({function()
   use 'wbthomason/packer.nvim'
 
+  use 'kyazdani42/nvim-web-devicons'
+  use 'ryanoasis/vim-devicons'
+
   use {
     'glacambre/firenvim',
     run = function() vim.fn['firenvim#install'](0) end
@@ -46,6 +49,15 @@ return require('packer').startup({function()
   use { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
   use 'nvim-treesitter/playground'
   use 'onsails/lspkind-nvim'
+
+  use 'dense-analysis/ale'
+  use {
+    'folke/trouble.nvim',
+    requires = 'kyazdani42/nvim-web-devicons',
+    config = function()
+      require("trouble").setup{}
+    end
+  }
 
   use { 'weilbith/nvim-code-action-menu', cmd = 'CodeActionMenu' }
   use 'kosayoda/nvim-lightbulb'
@@ -109,11 +121,7 @@ return require('packer').startup({function()
   use 'tmhedberg/matchit'
   use 'LeafCage/yankround.vim'
 
-  --use { 'junegunn/fzf', cmd = function() vim.fn['fzf#install']() end }
-  --use { 'yuki-ycino/fzf-preview.vim', branch = 'release/rpc' }
-
   use 'preservim/nerdtree'
-  use 'ryanoasis/vim-devicons'
   use 'PhilRunninger/nerdtree-visual-selection'
   use 'Xuyuanp/nerdtree-git-plugin'
 
