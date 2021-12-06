@@ -120,4 +120,8 @@ local function setup_servers()
   end)
 end
 
+-- code actions
+vim.cmd [[autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_lightbulb()]]
+vim.api.nvim_set_keymap('n', '<leader>a', ':CodeActionMenu<CR>', {noremap = true})
+
 setup_servers()
