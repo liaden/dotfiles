@@ -61,6 +61,7 @@ export MANWIDTH=999
 command -v direnv > /dev/null  && eval "$(direnv hook zsh)"
 [ -f ~/.zsh_work ] && source ~/.zsh_work
 
+source ~/.zsh/minikube.zsh
 source ~/.zsh/ag_helpers
 source ~/.zsh/git_helpers
 source ~/.zsh/fzf.zsh
