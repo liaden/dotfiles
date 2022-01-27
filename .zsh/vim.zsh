@@ -39,3 +39,15 @@ bindkey '^?' backward-delete-char
 bindkey '^h' backward-delete-char
 bindkey '^w' backward-kill-word
 bindkey '^r' history-incremental-search-backward
+
+# toggle fg/bg (mostly vim) with c-z
+function fg-bg {
+    if [[ $#BUFFER -eq 0 ]]; then
+        BUFFER=fg
+        zle accept-line
+    else
+        zle push-input
+    fi
+}
+zle -N fg-bg
+bindkey '^z' fg-bg
