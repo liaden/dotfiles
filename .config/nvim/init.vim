@@ -53,6 +53,7 @@ set guioptions-=lbrLR
 " make basic controls easier to use
 let mapleader = " "
 
+source $HOME/.config/nvim/sideways.vim
 source $HOME/.config/nvim/vipsql.vim
 source $HOME/.config/nvim/nerdtree.vim
 source $HOME/.config/nvim/telescope.vim

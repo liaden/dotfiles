@@ -115,6 +115,7 @@ return require('packer').startup({function()
   use 'rhysd/committia.vim'
   use 'junegunn/gv.vim'
 
+  use 'AndrewRadev/sideways.vim'
   use 'kana/vim-textobj-user'
   use 'ntpeters/vim-better-whitespace'
   use 'scrooloose/nerdcommenter'
