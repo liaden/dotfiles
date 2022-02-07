@@ -70,3 +70,8 @@
 [user]
 	name = Joel Johnson
 	email = johnson.joel.b@gmail.com
+
+[blame]
+    ignoreRevsFile = .git-blame-ignore-revs
+    markIgnoredLines = true
+    markUnblamableLines = true
