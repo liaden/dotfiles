@@ -50,6 +50,7 @@ go
 # node
 .node-gyp
 .npm
+.yarn
 .yarnrc
 
 # rust
@@ -73,6 +74,10 @@ go
 .terraform.d
 .vault-token
 .aws
+.kube
+.lima
+.colima
+.minikube
 
 # Don't leak private data
 .ssh
@@ -85,20 +90,29 @@ go
 .cisco
 
 # Messy transient config (autogen)
+.config/MusicBrainz
+.config/QtProject.conf
+.config/Slack
+.config/balena-etcher-electron
+.config/cef_user_data
 .config/coc
-.config/htop
 .config/configstore
 .config/dconf
 .config/direnv
 .config/evolution
-.config/tmux/plugins/*
-.config/pulse
-.config/monitors.xml*
-.config/user-dirs*
+.config/firefox
 .config/gnome-*
+.config/google-chrome
 .config/gtk*
-.config/Slack
+.config/htop
 .config/ibus
+.config/mimeapps.list
+.config/monitors.xml*
+.config/pulse
+.config/tmux/plugins/*
+.config/gree-sitter
+.config/user-dirs*
+.config/vlc
 .configls
 .cache
 .iterm2*
@@ -124,6 +138,9 @@ VirtualBox VMs
 .zwc
 .bash*
 
+# extra editors
+.atom
+.vscode
 
 # Misc.
 .lesshst
@@ -139,6 +156,7 @@ VirtualBox VMs
 .sudo*
 .fehbg
 .pki
+.webdrivers
 
 .xmonad/xmonad-*
 .xmonad/xmonad.hi
