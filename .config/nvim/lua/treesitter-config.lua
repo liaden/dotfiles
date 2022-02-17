@@ -12,4 +12,29 @@ require'nvim-treesitter.configs'.setup {
   playground = {
     enable = true,
   },
+  textobjects = {
+    select = {
+      enable = true,
+      keymaps = {
+        ["af"] = "@function.outer",
+        ["if"] = "@function.inner",
+        ["aC"] = "@class.outer",
+        ["iC"] = "@class.inner",
+        ["a#"] = "@comment.outer",
+        ["al"] = "@loop.outer",
+        ["il"] = "@loop.inner",
+        ["aP"] = "@parameter.outer",
+        ["iP"] = "@paramter.inner",
+        ["a?"] = "@conditional.outer",
+        ["i?"] = "@conditional.inner",
+      },
+    },
+    swap = {
+      enable = true,
+    },
+    move = {
+      enable = true,
+
+    },
+  },
 }

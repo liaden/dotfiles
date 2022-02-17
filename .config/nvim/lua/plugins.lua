@@ -119,6 +119,7 @@ return require('packer').startup({function()
   use 'kana/vim-textobj-user'
   use 'preservim/vim-textobj-sentence'
   use 'preservim/vim-textobj-quote'
+  use 'nvim-treesitter/nvim-treesitter-textobjects'
 
   use 'ntpeters/vim-better-whitespace'
   use 'scrooloose/nerdcommenter'
