@@ -68,6 +68,7 @@ source $HOME/.config/nvim/mundo.vim
 source $HOME/.config/nvim/spell.vim
 source $HOME/.config/nvim/tmux.vim
 source $HOME/.config/nvim/linting.vim
+source $HOME/.config/nvim/prose.vim
 
 " make regex behave sanely
 nnoremap / /\v

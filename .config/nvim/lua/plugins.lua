@@ -117,6 +117,9 @@ return require('packer').startup({function()
 
   use 'AndrewRadev/sideways.vim'
   use 'kana/vim-textobj-user'
+  use 'preservim/vim-textobj-sentence'
+  use 'preservim/vim-textobj-quote'
+
   use 'ntpeters/vim-better-whitespace'
   use 'scrooloose/nerdcommenter'
   use 'tmhedberg/matchit'
@@ -131,6 +134,8 @@ return require('packer').startup({function()
     run = 'cd app && yarn install',
     cmd = 'MarkdownPreview'
   }
+
+  use 'preservim/vim-pencil'
 
   use {
       "folke/which-key.nvim",
