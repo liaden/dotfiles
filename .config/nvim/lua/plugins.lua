@@ -3,6 +3,7 @@ local execute = vim.api.nvim_command
 local fn = vim.fn
 
 local install_path = fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
+local compile_path = fn.stdpath('cache')..'/packer_compiled.lua'
 
 if fn.empty(fn.glob(install_path)) > 0 then
   packer_bootstrap = fn.system({'git', 'clone', 'https://github.com/wbthomason/packer.nvim', install_path})
@@ -154,6 +155,7 @@ return require('packer').startup({function()
   end
 end,
 config = {
+  compile_path = compile_path,
   display = {
     open_fn = require('packer.util').float,
   },
