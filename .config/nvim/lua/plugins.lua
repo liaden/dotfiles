@@ -156,6 +156,7 @@ end,
 config = {
   display = {
     open_fn = require('packer.util').float,
-  }
+  },
+  autoremove = true,
 }
 })
