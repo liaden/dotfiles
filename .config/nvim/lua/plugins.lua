@@ -50,6 +50,16 @@ return require('packer').startup({function()
   use { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
   use 'nvim-treesitter/playground'
   use 'onsails/lspkind-nvim'
+  use {
+    'jose-elias-alvarez/null-ls.nvim',
+    config = function()
+      require("null-ls").setup({
+        sources = {
+          require("null-ls").builtins.diagnostics.vale,
+        },
+      })
+    end
+  }
 
   use 'dense-analysis/ale'
   use {
