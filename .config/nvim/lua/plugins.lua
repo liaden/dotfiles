@@ -141,8 +141,13 @@ return require('packer').startup({function()
 
   use {
       "folke/which-key.nvim",
-      config = function() require("which-key").setup {
-        }
+      config = function() require("which-key").setup({
+            plugins = {
+                spelling = {
+                    enabled = true
+                }
+            }
+        })
       end
   }
 
