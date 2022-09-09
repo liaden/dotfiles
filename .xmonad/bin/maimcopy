@@ -1,2 +1,2 @@
 #!/bin/bash
-maim -s | xclip -selection clipboard -t image/png && notify-send "Screenshot" "Copied to Clipboard" -i flameshot
+maim -s | xclip -selection clipboard -t image/png && notify-send "Screenshot" "Copied to Clipboard" -i flameshot -t 3000
