@@ -42,7 +42,6 @@ if [[ -d "$HOME/go/bin" ]]; then
   export PATH="$HOME/go/bin:$PATH"
 fi
 
-alias git=hub
 alias vim=nvim
 
 setopt AUTO_CD                  # cd without explicit cd
