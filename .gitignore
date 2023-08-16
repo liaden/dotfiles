@@ -67,6 +67,11 @@ go
 .pry.d
 .rubies
 
+# postgres
+.psql_history*
+.pgpass
+.pg_service.conf
+
 # Chef
 .berkshelf
 

@@ -12,4 +12,6 @@ if [[ -d $HOME/.zfunc ]]; then
   fpath+=$HOME/.zfunc
 fi
 
+fpath+=$HOME/.zsh/func
+
 compdef _git config=git

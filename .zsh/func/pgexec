@@ -1,0 +1,36 @@
+#!/usr/bin/env zsh
+
+__pgexec() {
+    # intercept these options prior
+    echo 2
+    printf "blarr"
+    zparseopts -D -E h=help -help=help L:=log_file --log-file:log_file f+:scripts -file+:scripts
+    printf "$?"
+
+    printf "${help}"
+    printf "${scripts}"
+    if [ ${#help[@]} -gt 0 ]; then
+       printf "pgexec: wrapper around psql to execute script file"
+       printf ""
+       printf "Usage:"
+       printf "  pgexec -f first.sql -f second.sql -v varname=varvalue [PSQL ARGS]"
+       printf ""
+       printf "Runs script in a transaction, stops on errors, and writes queries/results to pgexec.date.log"
+       printf "Other arguments are passed through to psql"
+       exit 0
+    fi
+
+    if [ ${#scripts[@]} -eq 0 ]; then
+        printf "No SQL scripts were specified. Exiting"
+        exit 1
+    fi
+
+    log_file="${log_file[1]:-"pgexec.$(date +"%Y-%m-%d.%H-%M-%S).log}"
+
+    for file in "${scripts[@]}"; do
+        echo 1
+        psql -v ON_ERROR_STOP --single-transaction --log-file=$log_file -f $file $@
+    done
+}
+
+__pgexec "$@"
