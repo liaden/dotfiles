@@ -16,16 +16,13 @@ if [[ -d /home/linuxbrew ]]; then
   export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 fi
 
-source ~/.zsh/completions.zsh
-
-## customize powerlevel9k theme
-if [[ "$(hostname)" == "CLM-JJOHNSON10.local" ]]; then
-  export DEFAULT_USER="jjohnson10"
-fi
+zgenom autoupdate
 
 # if the init scipt doesn't exist
 if ! zgenom saved; then
+  source ~/.zsh/completions.zsh
   source "${HOME}/.zsh/plugins"
+  zgenom save
 fi
 
 source ~/.zsh/asdf.zsh

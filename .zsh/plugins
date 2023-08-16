@@ -1,31 +1,26 @@
-echo "Creating a zgen save"
-
-zgen oh-my-zsh
+zgenom oh-my-zsh
 
 # plugins
-zgen oh-my-zsh plugins/git
-zgen oh-my-zsh plugins/sudo
-zgen oh-my-zsh plugins/ruby
-zgen oh-my-zsh plugins/bundler
-zgen oh-my-zsh plugins/command-not-found
-zgen oh-my-zsh plugins/docker
-zgen oh-my-zsh plugins/docker-compose
-zgen oh-my-zsh plugins/terraform
+zgenom oh-my-zsh plugins/git
+zgenom oh-my-zsh plugins/sudo
+zgenom oh-my-zsh plugins/ruby
+zgenom oh-my-zsh plugins/bundler
+zgenom oh-my-zsh plugins/command-not-found
+zgenom oh-my-zsh plugins/docker
+zgenom oh-my-zsh plugins/docker-compose
+zgenom oh-my-zsh plugins/terraform
 
-#zgen load changyuheng/zsh-interactive-cd
+#zgenom load changyuheng/zsh-interactive-cd
 
-zgen load qoomon/zsh-lazyload
+zgenom load qoomon/zsh-lazyload
 
-zgen load zdharma/fast-syntax-highlighting
+zgenom load zdharma/fast-syntax-highlighting
 
 # fzf extras
-zgen load pierpo/fzf-docker
+zgenom load pierpo/fzf-docker
 
 # completions
-zgen load zsh-users/zsh-completions src
+zgenom load zsh-users/zsh-completions src
 
 # theme
-zgen load romkatv/powerlevel10k powerlevel10k
-
-# save all to init script
-zgen save
+zgenom load romkatv/powerlevel10k powerlevel10k
