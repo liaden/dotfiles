@@ -5,6 +5,8 @@ elif [[ -d /opt/homebrew/opt/asdf ]]; then
     export ASDF_DIR="/opt/homebrew/opt/asdf"
     source $ASDF_DIR/asdf.sh
 elif [[ -d /home/linuxbrew/.linuxbrew/opt/asdf ]]; then
-    export ASDF_DIR="/home/linuxbrew/.linuxbrew/opt/asdf/libexec"
-    source $ASDF_DIR/asdf.sh
+    if [[ -f /home/linuxbrew/.linuxbrew/opt/asdf/libexec/asdf.sh ]]; then
+        export ASDF_DIR="/home/linuxbrew/.linuxbrew/opt/asdf/libexec"
+        source $ASDF_DIR/asdf.sh
+    fi
 fi
