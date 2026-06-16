@@ -1,0 +1,31 @@
+auto_sync = false
+update_check = false
+
+search_mode = "fuzzy"
+filter_mode = "host"
+filter_mode_shell_up_key_binding = "session"
+
+style = "compact"
+inline_height = 20
+show_preview = true
+enter_accept = true
+workspaces = true
+
+[stats]
+common_subcommands = [
+  "cargo",
+  "docker",
+  "podman",
+  "git",
+  "go",
+  "kubectl",
+  "brew",
+  "bundle",
+  "rails",
+  "rake",
+  "systemctl",
+  "tmux",
+]
+
+[search]
+filters = ["workspace", "host", "session", "global"]
