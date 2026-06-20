@@ -2,13 +2,13 @@
 xrandr \
   --output DisplayPort-0 \
     --off \
-  --output DisplayPort-1 \
+  --output DisplayPort-2 \
     --mode 3840x2160 \
     --dpi 163 \
     --scale 1x1 \
     --pos 0x0 \
     --rotate left \
-  --output DisplayPort-2 \
+  --output DisplayPort-1 \
     --primary \
     --mode 3840x2160 \
     --dpi 163 \

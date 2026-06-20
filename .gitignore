@@ -167,3 +167,4 @@ VirtualBox VMs
 .xmonad/xmonad-*
 .xmonad/xmonad.hi
 .xmonad/xmonad.o
+.xmonad/xmonad.errors
