@@ -58,6 +58,16 @@
     exec = !exec
     root = !pwd
 
+    # codebase archaeology (piechowski.io/post/git-commands-before-reading-code)
+    contributors = "!f() { git shortlog -sn --no-merges \"${@:-HEAD}\"; }; f"
+    contributors-recent = "!f() { git shortlog -sn --no-merges --since='6 months ago' \"${@:-HEAD}\"; }; f"
+    bugspots = "!git log -i -E --grep='fix|bug|broken' --name-only --format='' | sort | uniq -c | sort -nr | head -20"
+    velocity = "!git log --format='%ad' --date=format:%Y-%m | sort | uniq -c"
+    firefights = "!git log --oneline --since='1 year ago' --grep='revert|hotfix|emergency|rollback' -i -E"
+    graph = log --graph --pretty=format:'%h -%d %s (%cr) <%an>' --abbrev-commit
+    churn-recent = "!f() { git log --all --find-copies --find-renames --name-only --format='format:' --since='1 year ago' \"$@\" | awk 'NF{a[$0]++}END{for(i in a){print a[i], i}}' | sort -rn; }; f"
+    churn-over-time = "!f() { WIN=${1:-4}; git log --format='week:%ad' --date=format:%Y-W%V --name-only | awk '/^week:/{w=substr($0,6)} NF&&!/^week:/{print w}' | sort | uniq -c | awk -v win=\"$WIN\" '{weeks[++n]=$2; counts[n]=$1} END{for(i=1;i<=n;i++){sum=0;c=0;for(j=i-win+1;j<=i;j++){if(j>=1){sum+=counts[j];c++}} printf \"%s\\t%4d\\t%.1f\\n\",weeks[i],counts[i],sum/c}}'; }; f"
+
 [branch]
     autosetupmerge = always
     autosetuprebase = always
