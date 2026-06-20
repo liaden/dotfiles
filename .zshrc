@@ -62,6 +62,8 @@ source ~/.zsh/ag_helpers
 source ~/.zsh/git_helpers
 source ~/.zsh/fzf.zsh
 source ~/.zsh/atuin.zsh
+source ~/.zsh/bun.zsh
+source ~/.zsh/gcloud.zsh
 # source ~/.zsh/chruby.zsh
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
@@ -70,3 +72,9 @@ source ~/.zsh/p10k.zsh
 
 export PATH="$HOME/bin:$PATH"
 # zprof
+
+export NODE_OPTIONS="--max-old-space-size=8192"
+
+# podman as docker drop-in replacement
+# alias docker=podman  # disabled — lima docker context
+# alias docker-compose="podman compose"  # disabled
