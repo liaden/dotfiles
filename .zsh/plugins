@@ -3,7 +3,7 @@ zgenom oh-my-zsh
 # plugins
 zgenom oh-my-zsh plugins/git
 zgenom oh-my-zsh plugins/sudo
-zgenom oh-my-zsh plugins/ruby
+#zgenom oh-my-zsh plugins/ruby
 zgenom oh-my-zsh plugins/bundler
 zgenom oh-my-zsh plugins/command-not-found
 zgenom oh-my-zsh plugins/docker

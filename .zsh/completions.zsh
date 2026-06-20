@@ -17,4 +17,7 @@ fi
 fpath+=$HOME/.zsh/func
 autoload -Uz pgexec
 
+setopt MENU_COMPLETE
+setopt COMPLETE_IN_WORD     # already set in a zsh plugin but
+
 zgenom compdef _git config=git
