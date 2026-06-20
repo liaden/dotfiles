@@ -7,26 +7,26 @@
 --
 import XMonad
 import XMonad.Layout.Fullscreen
-    ( fullscreenEventHook, fullscreenManageHook, fullscreenSupport, fullscreenFull )
+    ( fullscreenManageHook, fullscreenSupport, fullscreenFull )
 import Data.Monoid ()
 import System.Exit ()
 import XMonad.Util.SpawnOnce ( spawnOnce )
 import XMonad.Util.NamedScratchpad
 import XMonad.Actions.Submap
 import Graphics.X11.ExtraTypes.XF86 (xF86XK_AudioLowerVolume, xF86XK_AudioRaiseVolume, xF86XK_AudioMute, xF86XK_MonBrightnessDown, xF86XK_MonBrightnessUp, xF86XK_AudioPlay, xF86XK_AudioPrev, xF86XK_AudioNext)
-import XMonad.Hooks.EwmhDesktops ( ewmh )
+import XMonad.Hooks.EwmhDesktops ( ewmh, ewmhFullscreen )
 import Control.Monad ( join, when )
 import XMonad.Layout.NoBorders
 import XMonad.Hooks.ManageDocks
-    ( avoidStruts, docks, manageDocks, Direction2D(D, L, R, U) )
+    ( avoidStruts, docks, manageDocks )
+import XMonad.Util.Types ( Direction2D(..) )
 import XMonad.Hooks.ManageHelpers ( doFullFloat, isFullscreen )
 import XMonad.Layout.Spacing ( spacingRaw, Border(Border) )
 import XMonad.Layout.PerScreen
 import XMonad.Layout.Column
 import XMonad.Layout.ThreeColumns
 import XMonad.Layout.Gaps
-    ( Direction2D(D, L, R, U),
-      gaps,
+    ( gaps,
       setGaps,
       GapMessage(DecGap, ToggleGaps, IncGap) )
 
@@ -99,7 +99,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     [ ((modm .|. shiftMask, xK_Return), spawn $ XMonad.terminal conf)
 
     -- launch rofi, dashboard, and sidebar
-    , ((modm,               xK_o     ), spawn "~/.xmonad/bin/launcher.sh")
+    , ((modm,               xK_o     ), spawn "~/.config/rofi/scripts/launcher.sh type-7 style-4")
     , ((modm,               xK_p     ), spawn "~/.xmonad/bin/eww-toggle dashboard")
     , ((modm,               xK_s     ), spawn "~/.xmonad/bin/eww-toggle sidebar")
 
@@ -107,6 +107,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm, xK_f), submap . M.fromList $
         [ ((0, xK_m),                   namedScratchpadAction scratchpads "music")
         , ((0, xK_s),                   namedScratchpadAction scratchpads "slack")
+        , ((0, xK_d),                   namedScratchpadAction scratchpads "discord")
         ])
 
     -- Audio keys
@@ -189,6 +190,9 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Push window back into tiling
     , ((modm,               xK_t     ), withFocused $ windows . W.sink)
 
+    -- Float focused window to full screen
+    , ((modm .|. shiftMask, xK_f     ), withFocused $ \w -> windows $ W.float w (W.RationalRect 0 0 1 1))
+
     -- Increment the number of windows in the master area
     , ((modm              , xK_comma ), sendMessage (IncMasterN 1))
 
@@ -202,7 +206,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- , ((modm              , xK_b     ), sendMessage ToggleStruts)
 
     -- Quit xmonad
-    , ((modm .|. shiftMask, xK_q     ), spawn "~/.xmonad/bin/powermenu.sh")
+    , ((modm .|. shiftMask, xK_q     ), spawn "~/.config/rofi/scripts/powermenu.sh type-3 style-5")
 
     -- Restart xmonad
     , ((modm              , xK_q     ), spawn "xmonad --recompile; xmonad --restart")
@@ -250,7 +254,7 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
     ]
 
 -- scratch pads
-scratchpads = [ music, slack ]
+scratchpads = [ music, slack, discord ]
   where
     music = NS "music" spawn find manage
       where
@@ -265,6 +269,12 @@ scratchpads = [ music, slack ]
         find = className=? "Slack"
         manage = customFloating $ rectCentered 0.8
 
+    discord = NS "discord"  spawn find manage
+      where
+        spawn = "discord"
+        find = className=? "discord"
+        manage = customFloating $ rectCentered 0.8
+--
 ------------------------------------------------------------------------
 -- Layouts:
 
@@ -376,13 +386,14 @@ myStartupHook = do
   spawnOnce "greenclip daemon"
   spawnOnce "dunst"
   spawnOnce "exec -merge ~/.Xresources"
+  spawnOnce "xscreensaver -no-splash"
 
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
-main = xmonad $ fullscreenSupport $ docks $ ewmh defaults
+main = xmonad $ fullscreenSupport $ docks $ ewmhFullscreen $ ewmh defaults
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will
