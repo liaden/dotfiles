@@ -1,16 +1,20 @@
 \set QUIET 1
 
 \x auto
-\timing
+
+\set COMP_KEYWORD_CASE upper
+\set ON_ERROR_ROLLBACK interactive
 
 \set VERBOSITY verbose
 \set HISTFILE ~/.psql_history- :DBNAME
 \set HISTCONTROL ignoredups
+\set HISTSIZE -1
 
 \pset null '¤'
 \pset linestyle unicode
 \pset border 2
 
-\set FETCH_HISTORY 1000
+\set FETCH_COUNT 1000
 
+\timing
 \unset QUIET

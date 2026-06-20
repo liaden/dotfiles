@@ -12,4 +12,4 @@ bind "^R" em-inc-search-prev
 bind "^U" em-kill-line
 bind "^W" ed-delete-prev-word
 
-
+psql:bind -s "^[e" "EXPLAIN (ANALYZE, BUFFERS, WAL)"
