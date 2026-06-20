@@ -33,8 +33,8 @@ return {
       vim.g.vimtex_compiler_method = 'latexmk'
       vim.g.vimtex_compiler_latexmk = {
         options = {
-          '-pdf',
-          '-shell-escape',     -- needed for minted, tikz externalize, etc.
+          '-pdfxe',
+          -- '-shell-escape',     -- needed for minted, tikz externalize, etc.
           '-verbose',
           '-file-line-error',
           '-synctex=1',
