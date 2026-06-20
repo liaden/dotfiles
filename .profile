@@ -25,7 +25,6 @@ fi
 if [ -d "$HOME/.local/bin" ] ; then
     PATH="$HOME/.local/bin:$PATH"
 fi
-source "$HOME/.cargo/env"
 
 if [[ -d /usr/local/opt/asdf ]]; then
     export ASDF_DIR="/usr/local/opt/asdf"
@@ -34,3 +33,4 @@ elif [[ -d /home/linuxbrew/.linuxbrew/opt/asdf ]]; then
     export ASDF_DIR="/home/linuxbrew/.linuxbrew/opt/asdf"
     source $ASDF_DIR/libexec/asdf.sh
 fi
+. "$HOME/.cargo/env"
