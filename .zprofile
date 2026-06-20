@@ -4,5 +4,5 @@ if [ -x "$(command -v xmonad)" ]; then
     export PATH="$HOME/.xmonad/bin:$PATH"
 fi
 
-eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+[[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv zsh)"
 source ~/.zsh/asdf.zsh
