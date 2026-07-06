@@ -163,6 +163,9 @@ VirtualBox VMs
 .pki
 .webdrivers
 .atuin
+.claude*
+.claude/*
+!.claude/settings.json
 
 .xmonad/xmonad-*
 .xmonad/xmonad.hi
