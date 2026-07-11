@@ -50,7 +50,14 @@ return {
     'MeanderingProgrammer/render-markdown.nvim',
     ft = { 'markdown' },
     dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' },
-    opts = {},
+    opts = {
+      code = {
+        -- snacks.image draws mermaid blocks as inline kitty-graphics images; its
+        -- placeholder cells encode the image in fg color, so any decoration
+        -- render-markdown paints there destroys the image. Hand mermaid to snacks.
+        disable = { 'mermaid' },
+      },
+    },
   },
 
   -- Markdown preview in browser
