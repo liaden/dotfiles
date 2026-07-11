@@ -85,6 +85,34 @@ autocmd('VimEnter', {
   end,
 })
 
+-- Serve a deterministic RPC socket per project so lain (and any other tool)
+-- can attach to this editor without being told where it lives. First instance
+-- in a project wins the socket; a socket left by a crashed instance is
+-- reclaimed (a live one answers sockconnect, a stale one refuses).
+autocmd('VimEnter', {
+  group = augroup('lain_server_socket', { clear = true }),
+  callback = function()
+    local cwd = vim.fn.getcwd()
+    local sock
+    if vim.fn.isdirectory(cwd .. '/.lain') == 1 then
+      sock = cwd .. '/.lain/nvim.sock'
+    else
+      local dir = (vim.env.XDG_RUNTIME_DIR or '/tmp') .. '/lain'
+      vim.fn.mkdir(dir, 'p')
+      sock = ('%s/nvim-%s.sock'):format(dir, vim.fn.sha256(cwd):sub(1, 12))
+    end
+    if vim.uv.fs_stat(sock) then
+      local ok, chan = pcall(vim.fn.sockconnect, 'pipe', sock)
+      if ok and chan > 0 then
+        vim.fn.chanclose(chan)
+        return -- another live instance owns this project's socket
+      end
+      os.remove(sock)
+    end
+    pcall(vim.fn.serverstart, sock)
+  end,
+})
+
 -- Detect bare git repo for dotfiles fugitive integration
 autocmd('BufEnter', {
   group = augroup('dotfiles_fugitive', { clear = true }),
