@@ -36,6 +36,23 @@ return {
 
       -- Better vim.ui.input
       input = { enabled = true },
+
+      -- Inline images + mermaid/latex diagrams (kitty graphics protocol;
+      -- no-ops gracefully on terminals without it, e.g. alacritty)
+      image = {
+        enabled = true,
+        convert = {
+          -- default args plus -p: chromium needs --no-sandbox on Ubuntu 24+
+          -- (AppArmor userns restriction), passed via puppeteer config
+          mermaid = function()
+            local theme = vim.o.background == 'light' and 'neutral' or 'dark'
+            return {
+              '-i', '{src}', '-o', '{file}', '-b', 'transparent', '-t', theme,
+              '-s', '{scale}', '-p', vim.fn.expand('~/.config/mermaid/puppeteer.json'),
+            }
+          end,
+        },
+      },
     },
     keys = {
       { '<leader>bd', function() Snacks.bufdelete() end, desc = 'Delete buffer (keep layout)' },
