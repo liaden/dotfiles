@@ -1,10 +1,11 @@
 return {
   -- CSS color preview (replaces vim-css-color)
+  -- catgoose fork: norcalli original is unmaintained and calls deprecated APIs
   {
-    'norcalli/nvim-colorizer.lua',
+    'catgoose/nvim-colorizer.lua',
     event = { 'BufReadPost', 'BufNewFile' },
     opts = {
-      'css', 'scss', 'html', 'javascript', 'typescript', 'lua',
+      filetypes = { 'css', 'scss', 'html', 'javascript', 'typescript', 'lua' },
     },
   },
 
