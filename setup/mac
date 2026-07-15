@@ -18,7 +18,7 @@ git clone https://github.com/tarjoilija/zgen.git "${HOME}/.zgen"
 brew install zsh bash pdsh gpg
 brew install direnv
 brew install tmux reattach-to-user-namespace
-brew install hub tig
+brew install hub tig gh
 brew install fzf
 brew install chruby ruby-install
 brew install neovim/neovim/neovim
@@ -46,3 +46,7 @@ export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl)"
 asdf install
 
 nvim +PlugInstall +qall
+
+# shipping automation: hopper/chore-pr/day-brief/ship-digest (in ~/bin)
+# needs `gh auth login` and claude installed/authed first
+./setup/auto-claude
