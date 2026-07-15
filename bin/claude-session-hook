@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# claude-session-hook <event> — maintain per-session state for concurrent
+# Claude Code sessions. Wired via hooks in ~/.claude/settings.json; feeds
+# the statusline timer, `claude-sessions`, and tmux window names.
+#
+# State: ~/.local/state/claude-sessions/<session_id>.json
+#   status     working | waiting | idle
+#   prompt_at  epoch of last prompt submit  (turn start)
+#   stopped_at epoch of last Stop event     (turn fully finished)
+set -euo pipefail
+
+STATE_DIR="$HOME/.local/state/claude-sessions"
+mkdir -p "$STATE_DIR"
+
+event="${1:?usage: claude-session-hook <HookEvent>}"
+input="$(cat)"
+sid="$(jq -r '.session_id // empty' <<<"$input")"
+[ -n "$sid" ] || exit 0
+state="$STATE_DIR/$sid.json"
+now="$(date +%s)"
+
+cwd="$(jq -r '.cwd // empty' <<<"$input")"
+branch=""
+[ -n "$cwd" ] && branch="$(git -C "$cwd" branch --show-current 2>/dev/null || true)"
+
+# Window label: Linear issue id if the branch follows Linear's naming
+# (joel/eng-123-slug), else branch, else directory.
+label="$(grep -oiE '[a-z]{2,5}-[0-9]+' <<<"$branch" | head -n 1 || true)"
+[ -n "$label" ] || label="$branch"
+[ -n "$label" ] || label="$(basename "${cwd:-claude}")"
+
+update() { # jq-filter [extra jq args...]
+  local filter="$1"; shift
+  { cat "$state" 2>/dev/null || echo '{}'; } | jq \
+    --arg cwd "$cwd" --arg branch "$branch" --arg label "$label" \
+    --arg pid "$PPID" --argjson now "$now" "$@" \
+    ".cwd=\$cwd | .branch=\$branch | .label=\$label | .pid=(\$pid|tonumber)
+     | .updated_at=\$now | $filter" > "$state.tmp"
+  mv "$state.tmp" "$state"
+}
+
+tmux_glyph() { # glyph
+  [ -n "${TMUX:-}" ] || return 0
+  tmux rename-window -t "${TMUX_PANE:-}" "$1 $label" 2>/dev/null || true
+}
+
+notify() {
+  if command -v osascript >/dev/null; then
+    osascript -e "display notification \"${1//\"/}\" with title \"claude\"" 2>/dev/null || true
+  elif command -v notify-send >/dev/null; then
+    notify-send claude "$1" 2>/dev/null || true
+  fi
+}
+
+case "$event" in
+  SessionStart)
+    update '.status="idle" | .started_at=$now'
+    tmux_glyph "○"
+    ;;
+  UserPromptSubmit)
+    task="$(jq -r '(.prompt // "") | split("\n")[0] | .[0:80]' <<<"$input")"
+    update '.status="working" | .prompt_at=$now | .task=$task' --arg task "$task"
+    tmux_glyph "✳"
+    ;;
+  Stop)
+    update '.status="idle" | .stopped_at=$now'
+    tmux_glyph "✓"
+    ;;
+  Notification)
+    # Only permission requests get a popup; idle "waiting for input" nudges
+    # would flip every finished window to ⏸ and devalue the glyphs.
+    msg="$(jq -r '.message // empty' <<<"$input")"
+    if grep -qi 'permission' <<<"$msg"; then
+      update '.status="waiting"'
+      tmux_glyph "⏸"
+      notify "$label needs you: $msg"
+    fi
+    ;;
+  SessionEnd)
+    rm -f "$state"
+    [ -n "${TMUX:-}" ] && tmux set-window-option -t "${TMUX_PANE:-}" automatic-rename on 2>/dev/null || true
+    ;;
+esac
+exit 0

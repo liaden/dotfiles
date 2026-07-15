@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# claude-sessions — one-keystroke answer to "which session is doing what".
+# Reads the state files maintained by claude-session-hook.
+set -euo pipefail
+
+STATE_DIR="$HOME/.local/state/claude-sessions"
+now="$(date +%s)"
+
+fmt_dur() {
+  local s="$1"
+  if   [ "$s" -ge 3600 ]; then printf '%dh%02dm' "$((s / 3600))" "$((s % 3600 / 60))"
+  elif [ "$s" -ge 60 ];   then printf '%dm%02ds' "$((s / 60))" "$((s % 60))"
+  else                         printf '%ds' "$s"
+  fi
+}
+
+shopt -s nullglob
+files=("$STATE_DIR"/*.json)
+if [ "${#files[@]}" -eq 0 ]; then
+  echo "(no live claude sessions)"
+  exit 0
+fi
+
+printf '  %-14s %-9s %-8s %-24s %s\n' LABEL STATUS FOR DIR TASK
+for f in "${files[@]}"; do
+  pid="$(jq -r '.pid // 0' "$f")"
+  if [ "$pid" -gt 0 ] && ! kill -0 "$pid" 2>/dev/null; then
+    rm -f "$f"
+    continue
+  fi
+
+  status="$(jq -r '.status // "?"' "$f")"
+  label="$(jq -r '.label // "?"' "$f")"
+  task="$(jq -r '.task // ""' "$f")"
+  dir="$(jq -r '.cwd // ""' "$f")"
+  dir="${dir/#$HOME/\~}"
+
+  case "$status" in
+    working) glyph="✳"; since="$(jq -r '.prompt_at // .updated_at // 0' "$f")" ;;
+    waiting) glyph="⏸"; since="$(jq -r '.updated_at // 0' "$f")" ;;
+    idle)    glyph="✓"; since="$(jq -r '.stopped_at // .updated_at // 0' "$f")" ;;
+    *)       glyph="?"; since="$(jq -r '.updated_at // 0' "$f")" ;;
+  esac
+  age=""
+  [ "$since" -gt 0 ] && age="$(fmt_dur $((now - since)))"
+
+  printf '%s %-14s %-9s %-8s %-24s %s\n' \
+    "$glyph" "${label:0:14}" "$status" "$age" "${dir:0:24}" "${task:0:60}"
+done

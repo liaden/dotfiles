@@ -166,6 +166,7 @@ VirtualBox VMs
 .claude*
 .claude/*
 !.claude/settings.json
+!.claude/statusline-command.sh
 
 .xmonad/xmonad-*
 .xmonad/xmonad.hi
