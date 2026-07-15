@@ -1,4 +1,5 @@
 {
+  "cleanupPeriodDays": 60,
   "permissions": {
     "allow": [
       "Bash(journalctl *)",
@@ -80,7 +81,32 @@
       "WebFetch(domain:rhaas.blogspot.com)",
       "WebFetch(domain:brandur.org)",
       "WebFetch(domain:use-the-index-luke.com)",
-      "WebFetch(domain:www.enterprisedb.com)"
+      "WebFetch(domain:www.enterprisedb.com)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:platform.claude.com)",
+      "WebFetch(domain:cloud.google.com)",
+      "WebFetch(domain:docs.cloud.google.com)",
+      "WebFetch(domain:docs.temporal.io)",
+      "WebFetch(domain:docs.sentry.io)",
+      "WebFetch(domain:developers.deepgram.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:arize.com)",
+      "WebFetch(domain:www.stedi.com)",
+      "Bash(bun run tsc)",
+      "Bash(bun run tsc *)",
+      "Bash(bun run typecheck)",
+      "Bash(bun run typecheck *)",
+      "Bash(bun run knip)",
+      "Bash(bun run lint)",
+      "Bash(npm view *)",
+      "Bash(gh run watch *)",
+      "Bash(gh search:*)",
+      "Bash(git fetch:*)",
+      "mcp__claude_ai_Linear__list_issues",
+      "mcp__claude_ai_Linear__get_issue",
+      "mcp__linear-server__list_issues",
+      "mcp__linear-server__get_issue"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -99,10 +125,14 @@
       "Bash(poweroff*)"
     ]
   },
-  "model": "sonnet",
+  "model": "us.anthropic.claude-opus-4-8",
   "attribution": {
-    "commit": ""
+    "commit": "",
+    "pr": ""
   },
+  "effortLevel": "high",
+  "showClearContextOnPlanAccept": true,
+  "skipWorkflowUsageWarning": true,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
     "type": "command",
@@ -154,8 +184,13 @@
   },
   "awaySummaryEnabled": false,
   "tui": "fullscreen",
-  "theme": "dark",
+  "theme": "dark-daltonized",
   "editorMode": "vim",
   "inputNeededNotifEnabled": false,
-  "useAutoModeDuringPlan": false
+  "useAutoModeDuringPlan": false,
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "preferredNotifChannel": "iterm2_with_bell"
 }
