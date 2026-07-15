@@ -32,13 +32,17 @@ brew install fd
 brew install asdf rbenv ruby-build
 brew install openssl libyaml libffi       # ruby-build recommended
 brew install homebrew/cask-fonts/font-ubuntu-mono-derivative-powerline
-brew install --with-jansson --HEAD universal-ctags/universal-ctags/universal-ctags
+brew install universal-ctags
 
-asdf plugin-add postgres
-asdf plugin-add python
-asdf plugin-add ruby https://github.com/asdf-vm/asdf-ruby.git
+asdf plugin add postgres
+asdf plugin add python
+asdf plugin add ruby https://github.com/asdf-vm/asdf-ruby.git
 
-asdf plugin-add nodejs https://github.com/asdf-vm/asdf-nodejs.git
+asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
 bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring
+
+# ruby-build doesn't auto-detect Homebrew's keg-only openssl on its own
+export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl)"
+asdf install
 
 nvim +PlugInstall +qall
