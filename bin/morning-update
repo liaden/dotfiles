@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# morning-update — keep the toolbox current before the day's work.
+#   - Homebrew: refresh formula metadata, then upgrade outdated packages.
+#     No `cleanup`: keep old versions on disk as a fallback if an upgrade
+#     misbehaves.
+#   - zgenom: pull latest for all plugins. `zgenom` is a zsh function, not a
+#     binary, so it must run inside zsh with zgenom.zsh sourced — it can't be
+#     exec'd directly from launchd.
+# Scheduled daily via ~/Library/LaunchAgents/com.morning.update.plist.
+set -uo pipefail   # not -e: one failing step shouldn't skip the rest
+
+LOG_DIR="$HOME/.config/morning-update/logs"
+mkdir -p "$LOG_DIR"
+
+echo "=== $(date '+%F %T') morning-update start"
+
+if command -v brew >/dev/null 2>&1; then
+  echo "--- brew update"
+  brew update || echo "brew update failed (continuing)"
+  echo "--- brew upgrade"
+  brew upgrade || echo "brew upgrade failed (continuing)"
+else
+  echo "brew not found; skipping"
+fi
+
+if [ -r "$HOME/.zgenom/zgenom.zsh" ]; then
+  echo "--- zgenom update"
+  zsh -c 'source "$HOME/.zgenom/zgenom.zsh"; zgenom update' \
+    || echo "zgenom update failed (continuing)"
+else
+  echo "zgenom not found; skipping"
+fi
+
+echo "=== $(date '+%F %T') morning-update done"
