@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# chore-pr — turn the top hopper item into a draft PR while you're not there.
+#
+# Headless Claude runs in a disposable git worktree so the real checkout —
+# including parked WIP — is never touched. The item leaves the hopper only
+# once a PR actually exists; failures leave it queued and notify.
+#
+# Permission posture: acceptEdits plus a scoped Bash allowlist (git + common
+# JS/Rust test runners). Commands outside the allowlist are denied and the
+# task stays in the hopper — widen the list here if a legitimate command
+# keeps getting denied. Never --dangerously-skip-permissions: work policy.
+set -euo pipefail
+. "$HOME/.config/auto-claude/config.sh"
+
+item="$(head -n 1 "$HOPPER_FILE" 2>/dev/null || true)"
+if [ -z "$item" ]; then
+  echo "$(date '+%F %T') hopper empty; nothing to do"
+  exit 0
+fi
+echo "=== $(date '+%F %T') chore: $item"
+
+cd "$WORK_REPO"
+git fetch origin "$BASE_BRANCH"
+
+slug="$(printf '%s' "$item" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | cut -c1-40 | sed 's/^-//; s/-$//')"
+branch="chore/auto-$slug-$(date +%m%d%H%M)"
+wt="$WORKTREE_DIR/$slug"
+
+cleanup() {
+  cd "$WORK_REPO"
+  git worktree remove --force "$wt" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+mkdir -p "$WORKTREE_DIR"
+git worktree add -b "$branch" "$wt" "origin/$BASE_BRANCH"
+cd "$wt"
+
+prompt="You are working unattended in a disposable git worktree on branch $branch.
+
+Task: $item
+
+Rules:
+- Make the smallest correct change that completes the task. Follow the
+  conventions already present in this codebase.
+- Run the tests relevant to what you touched; fix what you break.
+- Commit in small logical commits with terse messages explaining WHY.
+- Do not push, and do not touch anything unrelated to the task.
+- If the task is too large or ambiguous to do safely as a small PR, make
+  NO commits; instead write .auto-claude-blocked.md explaining what decision
+  or information is needed, then stop."
+
+claude_flags=(--permission-mode acceptEdits --allowedTools
+  "Bash(git status:*)" "Bash(git diff:*)" "Bash(git log:*)"
+  "Bash(git add:*)" "Bash(git commit:*)"
+  "Bash(npm test:*)" "Bash(npm run:*)" "Bash(npx:*)"
+  "Bash(pnpm:*)" "Bash(yarn:*)"
+  "Bash(cargo test:*)" "Bash(cargo check:*)" "Bash(cargo clippy:*)")
+
+if ! claude -p "$prompt" "${claude_flags[@]}"; then
+  notify "chore-pr errored on: $item (left in hopper)"
+  exit 1
+fi
+
+if [ -f .auto-claude-blocked.md ]; then
+  cp .auto-claude-blocked.md "$LOG_DIR/blocked-$slug.md"
+  notify "chore blocked, see logs/blocked-$slug.md: $item"
+  exit 1
+fi
+
+# Commit stragglers, then require actual commits beyond base.
+if [ -n "$(git status --porcelain)" ]; then
+  git add -A
+  git commit -m "chore: $item"
+fi
+if [ "$(git rev-list --count "origin/$BASE_BRANCH"..HEAD)" -eq 0 ]; then
+  notify "chore-pr produced no changes: $item (left in hopper)"
+  exit 1
+fi
+
+git push -u origin "$branch"
+gh pr create --draft \
+  --title "chore: $item" \
+  --body "Automated draft from the auto-claude chore hopper — review before merging.
+
+Task: $item"
+
+hopper rm 1
+notify "Draft PR ready: $item"
+echo "=== $(date '+%F %T') done: $item"

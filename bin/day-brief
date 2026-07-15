@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# day-brief — zero-decision morning start. First line is your first action.
+set -euo pipefail
+. "$HOME/.config/auto-claude/config.sh"
+
+cd "$WORK_REPO"
+out="$BRIEF_DIR/$(date +%F).md"
+
+mine="$(gh pr list --author "@me" --state open \
+        --json number,title,url,isDraft,reviewDecision,statusCheckRollup 2>/dev/null || echo '[]')"
+reviews="$(gh search prs --review-requested "@me" --state open \
+        --json title,url,repository 2>/dev/null || echo '[]')"
+issues="$(gh issue list --assignee "@me" --state open \
+        --json number,title,url 2>/dev/null || echo '[]')"
+hopper_items="$(cat "$HOPPER_FILE" 2>/dev/null || true)"
+
+claude -p "Produce a terse morning brief in markdown from this GitHub data.
+
+HARD REQUIREMENT: the very first line must be 'First action: <one concrete,
+physical, immediately startable action>' — the single highest-leverage thing
+to do first (failing CI and blocking reviews outrank new work).
+
+Then, only sections that are non-empty, each item one line with its URL:
+1. My open PRs needing attention (failing checks, changes requested, stale)
+2. Reviews others are waiting on me for
+3. At most 3 other items (assigned issues, chore hopper)
+
+My open PRs: $mine
+Review requests: $reviews
+Assigned issues: $issues
+Chore hopper: $hopper_items" | tee "$out"
+
+notify "Morning brief ready: $(head -n 1 "$out")"
