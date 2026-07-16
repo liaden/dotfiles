@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# linear-standup — every morning, fetch my assigned Linear issues and report
+# what changed since the previous run: newly-assigned issues, state/priority
+# changes, comments added, and sub-issues created.
+#
+# Robust-by-design: hits the Linear GraphQL API directly with a personal API
+# key (from the login keychain), NOT the Linear MCP — an OAuth MCP session may
+# silently fail to attach in a headless launchd run. The diff is computed
+# deterministically in jq; claude -p only writes the prose over that diff.
+#
+# Key:   security add-generic-password -s linear-api -a "$USER" -w
+# State: ~/.config/linear-standup/snapshot.json  (previous run, for diffing)
+# NOT tracked in the dotfiles bare repo (excluded via .cfg/info/exclude).
+set -uo pipefail
+
+CONF_DIR="$HOME/.config/linear-standup"
+SNAP="$CONF_DIR/snapshot.json"
+REPORT_DIR="$CONF_DIR/reports"
+mkdir -p "$REPORT_DIR"
+report="$REPORT_DIR/$(date +%F).md"
+
+notify() {
+  if command -v osascript >/dev/null; then
+    osascript -e "display notification \"${1//\"/}\" with title \"linear-standup\"" 2>/dev/null || true
+  elif command -v notify-send >/dev/null; then
+    notify-send linear-standup "$1" || true
+  fi
+}
+
+KEY="$(security find-generic-password -s linear-api -w 2>/dev/null || true)"
+if [ -z "$KEY" ]; then
+  echo "no Linear API key in keychain. Add one with:" >&2
+  echo "  security add-generic-password -s linear-api -a \"\$USER\" -w" >&2
+  exit 1
+fi
+
+# --- fetch: my assigned issues with comments + sub-issues ---------------------
+read -r -d '' QUERY <<'GQL' || true
+query {
+  viewer {
+    assignedIssues(first: 250, orderBy: updatedAt) {
+      nodes {
+        id identifier title priority priorityLabel url updatedAt
+        state { name type }
+        comments(first: 100) { nodes { id createdAt user { displayName } } }
+        children(first: 100) { nodes { id identifier title createdAt } }
+      }
+    }
+  }
+}
+GQL
+
+# jq -Rs turns the query into a JSON string safely (escapes newlines/quotes).
+payload="$(jq -Rns --arg q "$QUERY" '{query: $q}' <<<"$QUERY")"
+resp="$(curl -sS -X POST https://api.linear.app/graphql \
+  -H "Authorization: $KEY" \
+  -H "Content-Type: application/json" \
+  --data "$payload")" || { echo "curl to Linear failed" >&2; exit 1; }
+
+if ! jq -e '.data.viewer.assignedIssues.nodes' >/dev/null 2>&1 <<<"$resp"; then
+  echo "Linear API error:" >&2
+  jq -r '.errors[]?.message // "unknown error"' <<<"$resp" >&2 || echo "$resp" >&2
+  exit 1
+fi
+
+# Normalize to a stable per-issue shape for diffing.
+current="$(jq '[.data.viewer.assignedIssues.nodes[] | {
+  id, identifier, title, url,
+  priority: .priorityLabel,
+  state: .state.name,
+  state_type: .state.type,
+  comment_ids: [.comments.nodes[].id],
+  child_ids:   [.children.nodes[].id],
+  children:    [.children.nodes[] | {id, identifier, title}]
+}]' <<<"$resp")"
+
+# --- diff against previous snapshot ------------------------------------------
+if [ ! -f "$SNAP" ]; then
+  echo "$current" > "$SNAP"
+  echo "$(date '+%F %T') first run — snapshot seeded ($(jq length <<<"$current") issues); no diff yet." | tee "$report"
+  notify "Linear standup initialized ($(jq length <<<"$current") issues tracked)"
+  exit 0
+fi
+prev="$(cat "$SNAP")"
+
+# Emit a structured diff: new issues, and per-issue changes (state, priority,
+# added comments, added sub-issues) for issues present in both snapshots.
+# Terminal states (completed/canceled) are noise once closed: an issue that was
+# ALREADY terminal in the prior snapshot is skipped entirely, so comment churn
+# on long-closed tickets doesn't surface. A transition INTO Done still shows,
+# because its prior state wasn't terminal. Newly-seen terminal issues are
+# likewise suppressed.
+diff_json="$(jq -n --argjson cur "$current" --argjson prev "$prev" '
+  (["completed","canceled"]) as $terminal
+  | ($prev | map({key: .id, value: .}) | from_entries) as $p
+  | {
+      new_issues: [ $cur[] | select($p[.id] == null)
+                    | select([.state_type] | inside($terminal) | not)
+                    | {identifier, title, state, priority, url} ],
+      changed: [ $cur[] | select($p[.id] != null)
+                 | . as $c | ($p[.id]) as $o
+                 | select([$o.state_type] | inside($terminal) | not)
+                 | {
+                     identifier, title, url,
+                     state_change:    (if $c.state    != $o.state    then {from: $o.state,    to: $c.state}    else null end),
+                     priority_change: (if $c.priority != $o.priority then {from: $o.priority, to: $c.priority} else null end),
+                     new_comments:    ([ $c.comment_ids[] | select([$o.comment_ids[]] | index(.) | not) ] | length),
+                     new_children:    [ $c.children[] | select(.id as $cid | ([$o.child_ids[]] | index($cid)) | not) | {identifier, title} ]
+                   }
+                 | select(.state_change or .priority_change or (.new_comments > 0) or ((.new_children | length) > 0)) ]
+    }' )"
+
+nnew="$(jq '.new_issues | length' <<<"$diff_json")"
+nchg="$(jq '.changed | length' <<<"$diff_json")"
+
+# --- report -------------------------------------------------------------------
+if [ "$nnew" -eq 0 ] && [ "$nchg" -eq 0 ]; then
+  echo "# Linear standup $(date +%F)" | tee "$report"
+  echo "" | tee -a "$report"
+  echo "No changes to your assigned issues since the last run." | tee -a "$report"
+else
+  if command -v claude >/dev/null 2>&1; then
+    claude -p "Write a terse morning standup in markdown titled '# Linear standup $(date +%F)'
+from this diff of my assigned Linear issues since yesterday. Only include
+non-empty sections, each item one line with its identifier, title, and URL:
+1. Newly assigned to me
+2. State changes (show from → to)
+3. Priority changes (show from → to)
+4. Issues with new comments (say how many)
+5. New sub-issues created under my issues
+No preamble, no fluff.
+
+DIFF JSON:
+$diff_json" | tee "$report"
+  else
+    # Deterministic fallback if claude is unavailable.
+    { echo "# Linear standup $(date +%F)"; echo
+      echo "## Newly assigned"; jq -r '.new_issues[] | "- \(.identifier) \(.title) — \(.url)"' <<<"$diff_json"
+      echo; echo "## Changed"
+      jq -r '.changed[] | "- \(.identifier) \(.title)"
+        + (if .state_change then " [state \(.state_change.from)→\(.state_change.to)]" else "" end)
+        + (if .priority_change then " [priority \(.priority_change.from)→\(.priority_change.to)]" else "" end)
+        + (if .new_comments > 0 then " [+\(.new_comments) comments]" else "" end)
+        + (if (.new_children|length) > 0 then " [+\(.new_children|length) sub-issues]" else "" end)
+        + " — \(.url)"' <<<"$diff_json"
+    } | tee "$report"
+  fi
+  notify "Linear standup: $nnew new, $nchg changed"
+fi
+
+# Advance the snapshot only after a successful report.
+echo "$current" > "$SNAP"
