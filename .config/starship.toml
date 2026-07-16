@@ -1,0 +1,154 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# Port of ~/.zsh/p10k.zsh (p10k-rainbow, 2020 wizard + hand edits).
+#
+# Colours are terminal palette INDICES (0-255), not hex, exactly as p10k used
+# them — the prompt follows the terminal theme instead of hardcoding one.
+# Measured from the real p10k prompt: os bg=7, dir bg=4, git bg=3, fill fg=240.
+#
+# Only modules named below render; starship's ~60 default language modules are
+# excluded by having an explicit `format` rather than $all.
+
+add_newline = true   # = POWERLEVEL9K_PROMPT_ADD_NEWLINE (blank line between prompts)
+
+# Right-hand content lives in `format` before $line_break, NOT in right_format:
+# right_format maps to zsh RPROMPT, which renders on the prompt's LAST line.
+# p10k puts it on line 1, and [fill] is what pushes it there.
+format = """
+[](fg:7)\
+$os\
+[](fg:7 bg:4)\
+$directory\
+[](fg:4 bg:3)\
+$git_branch\
+$git_status\
+[](fg:3)\
+$fill\
+$status\
+$cmd_duration\
+$jobs\
+$direnv\
+$nodejs$ruby$python$golang$rust\
+$username$hostname\
+[](fg:7)\
+$time\
+$line_break\
+$character"""
+
+# = MULTILINE_FIRST_PROMPT_GAP_CHAR='─' / GAP_FOREGROUND=240
+[fill]
+symbol = "─"
+style = "fg:240"
+
+[os]
+disabled = false
+format = "[ $symbol ](fg:0 bg:7)"
+
+[os.symbols]
+Ubuntu = ""
+Linux = ""
+
+[directory]
+style = "fg:254 bg:4"
+format = "[  $path ]($style)[$read_only]($read_only_style)"
+read_only = "  "
+read_only_style = "fg:254 bg:4"
+truncation_length = 0          # DIR_MAX_LENGTH=80 / show the path
+truncate_to_repo = false
+# p10k used SHORTEN_STRATEGY=truncate_to_unique (shortest *unique* prefix).
+# starship has no equivalent; this is the nearest thing — a fixed 1 char.
+fish_style_pwd_dir_length = 1
+truncation_symbol = ""         # = SHORTEN_DELIMITER='' (no ellipsis)
+
+[git_branch]
+symbol = " "                  # = VCS_BRANCH_ICON ' '
+style = "fg:0 bg:3"
+format = "[ $symbol$branch(:$remote_branch)]($style)"
+
+# Mirrors my_git_formatter(): ⇣42⇡42 *42 ~42 +42 !42 ?42, with exact counts
+# (p10k set every *_MAX_NUM=-1, i.e. no ">9" capping — ${count} matches that).
+[git_status]
+style = "fg:0 bg:3"
+format = "[($ahead_behind$stashed$conflicted$staged$modified$untracked )]($style)"
+ahead = " ⇡${count}"
+behind = " ⇣${count}"
+diverged = " ⇣${behind_count}⇡${ahead_count}"
+stashed = " *${count}"
+conflicted = " ~${count}"
+staged = " +${count}"
+modified = " !${count}"
+untracked = " ?${count}"       # = VCS_UNTRACKED_ICON '?'
+
+# p10k: STATUS_OK=false (silent on success) and STATUS_ERROR=false, but
+# ERROR_SIGNAL/ERROR_PIPE=true — so only signals and pipe failures surface.
+[status]
+disabled = false
+success_symbol = ""
+symbol = ""
+not_executable_symbol = "✘"
+not_found_symbol = "✘"
+sigint_symbol = "✘"
+signal_symbol = "✘"
+style = "fg:0 bg:7"
+format = "[$symbol$signal_name]($style)"
+map_symbol = true
+pipestatus = true
+
+[cmd_duration]
+min_time = 3_000               # ms — p10k THRESHOLD=3 was SECONDS
+show_milliseconds = false
+style = "fg:0 bg:3"
+format = "[ $duration ]($style)"
+
+[jobs]
+style = "fg:0 bg:7"
+format = "[ $symbol$number ]($style)"
+
+[direnv]
+disabled = false
+style = "fg:3 bg:0"
+format = "[ $symbol$loaded ]($style)"
+symbol = " "
+
+# p10k's asdf segment has no starship equivalent; the per-language modules read
+# .tool-versions. ASDF_PROMPT_ALWAYS_SHOW=false, so these stay near-silent.
+[nodejs]
+style = "fg:0 bg:2"
+format = "[ $symbol$version ]($style)"
+[ruby]
+style = "fg:0 bg:1"
+format = "[ $symbol$version ]($style)"
+[python]
+style = "fg:0 bg:4"
+format = "[ $symbol$version ]($style)"
+[golang]
+style = "fg:0 bg:4"
+format = "[ $symbol$version ]($style)"
+[rust]
+style = "fg:0 bg:208"
+format = "[ $symbol$version ]($style)"
+
+# = CONTEXT_TEMPLATE '%n@%m'
+[username]
+disabled = false
+show_always = false            # p10k only showed context when notable
+style_user = "fg:3 bg:0"
+style_root = "fg:1 bg:0"
+format = "[ $user ]($style)"
+
+[hostname]
+disabled = false
+ssh_only = true
+style = "fg:3 bg:0"
+format = "[@$hostname ]($style)"
+
+[time]
+disabled = false
+time_format = "%I:%M:%S %p"    # = TIME_FORMAT '%D{%I:%M:%S %p}' (12h)
+style = "fg:0 bg:7"
+format = "[ $time  ]($style)"
+
+[character]
+success_symbol = "[❯](bold fg:2)"
+error_symbol = "[❯](bold fg:1)"
+vicmd_symbol = "[❮](bold fg:2)"

@@ -22,5 +22,3 @@ zgenom load pierpo/fzf-docker
 # completions
 zgenom load zsh-users/zsh-completions src
 
-# theme
-zgenom load romkatv/powerlevel10k powerlevel10k

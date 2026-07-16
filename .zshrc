@@ -1,12 +1,5 @@
 # zmodload zsh/zprof
 
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
 source "${HOME}/.zgenom/zgenom.zsh"
 
 # add linuxbrew and completions
@@ -19,9 +12,9 @@ zgenom autoupdate
 # `zgenom saved` sources $ZGEN_INIT and then inherits the exit status of the
 # LAST plugin it loaded, so one plugin returning non-zero (fzf-docker does) makes
 # `saved` false and rebuilds the whole cache on every shell — ~1.4s instead of
-# ~0.1s. It is masked today only because powerlevel10k is loaded last and returns
-# 0. Test for the init file itself; a plugin's exit status is not a statement
-# about whether the cache exists.
+# ~0.1s. powerlevel10k used to be loaded last and returned 0, which hid this for
+# years. Test for the init file itself; the exit status of a plugin is not a
+# statement about whether the cache exists.
 if [[ -f ${ZGEN_INIT} ]]; then
   source ${ZGEN_INIT}
 else
@@ -76,7 +69,7 @@ source ~/.zsh/gcloud.zsh
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-source ~/.zsh/p10k.zsh
+zsh_cache_source starship-init starship starship init zsh
 
 export PATH="$HOME/bin:$PATH"
 # zprof
