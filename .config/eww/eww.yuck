@@ -222,6 +222,11 @@
     (button :class "d-act pw-suspend"  :onclick "~/.config/eww/scripts/suspend.sh" "")
     (button :class "d-act pw-logout"   :onclick "~/.config/eww/scripts/logout.sh" "")))
 
+(defwidget d-calendar []
+  (box :class "d-card d-cal-card" :orientation "v" :space-evenly false
+    (r-head :name "CALENDAR" :accent "amber")
+    (calendar :class "d-cal" :show-heading true :show-day-names true :show-details false)))
+
 (defwidget dashboard []
   (box :class "dash" :orientation "v" :space-evenly false
     (box :class "dash-row" :orientation "h" :space-evenly false
@@ -230,6 +235,7 @@
       (d-weather))
     (box :class "dash-row" :orientation "h" :space-evenly false
       (d-quote)
+      (d-calendar)
       (d-folders))
     (d-actions)))
 

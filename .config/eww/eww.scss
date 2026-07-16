@@ -157,6 +157,26 @@ $dim:  #656e7c;
   margin: 9px;
 }
 
+// calendar
+// GtkCalendar is custom-drawn; these classes are its only styleable surface.
+// Column width derives from the day-number glyphs, so the day-name row has to
+// be set smaller than the numbers or "Sun/Mon/Tue" collide. GTK3 ignores the
+// -GtkCalendar-*-separation style properties, so relative sizing is the lever.
+.d-cal {
+  font-family: $vm;
+  font-size: 17px;
+  color: $text;
+}
+.d-cal.header    { color: $muted; font-size: 14px; }   // month / year heading
+.d-cal.button    { color: $dim; }                      // ‹ › month arrows
+.d-cal.button:hover { color: $amber; }
+// Colour only: GtkCalendar lays every cell out from the base font, so
+// font-size here is silently ignored. Day names therefore always fill their
+// column edge-to-edge — set `:show-day-names false` if that reads too dense.
+.d-cal.highlight { color: $dim; }                      // Sun Mon Tue … row
+.d-cal:indeterminate { color: #39404b; }               // days from adjacent months
+.d-cal:selected  { background-color: $amber; color: $bg; border-radius: 5px; }
+
 // time (hero)
 .d-clock { font-family: $vm; font-size: 74px; color: $text; margin: 4px 0px 2px 0px; }
 .d-clock-day  { font-family: $vm; font-style: italic; font-size: 22px; color: $pink; }
