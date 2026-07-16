@@ -10,6 +10,22 @@
 # task stays in the hopper — widen the list here if a legitimate command
 # keeps getting denied. Never --dangerously-skip-permissions: work policy.
 set -euo pipefail
+
+# Hold the machine awake for the whole run. The launchd schedule (or a pmset
+# scheduled wake) may only guarantee a brief wake window, but the Claude step
+# below runs for minutes — re-exec under `caffeinate -i` so idle sleep can't
+# interrupt a chore mid-flight. caffeinate releases the moment we exit, so the
+# laptop is free to sleep again. Guarded to avoid re-exec'ing forever.
+#   Wake the machine before the 06:00 launchd fire with a repeating schedule:
+#     sudo pmset repeat wake MTWRF 05:58:00   (cancel: sudo pmset repeat cancel)
+#   NOTE: reliable on AC power; a lid-closed MacBook on battery may deep-sleep
+#   past the scheduled wake regardless. A locked (but awake) screen is fine —
+#   launchd user agents run while locked.
+if [ -z "${CHORE_PR_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
+  export CHORE_PR_CAFFEINATED=1
+  exec caffeinate -i "$0" "$@"
+fi
+
 AUTO_CLAUDE_FEED_SOURCE=chore-pr
 . "$HOME/.config/auto-claude/config.sh"
 

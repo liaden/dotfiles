@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# hopper-add-popup — prompt for a chore inside a tmux floating popup and queue
+# it. Bound to prefix + a in tmux.conf via `display-popup -E`.
+set -euo pipefail
+
+printf 'Add chore to the hopper (empty to cancel):\n\n'
+read -r -p 'chore> ' chore
+
+# Trim leading/trailing whitespace; cancel silently on empty input.
+chore="${chore#"${chore%%[![:space:]]*}"}"
+chore="${chore%"${chore##*[![:space:]]}"}"
+[ -z "$chore" ] && exit 0
+
+hopper add "$chore"
+# Brief confirmation before the -E popup auto-closes.
+sleep 0.6
