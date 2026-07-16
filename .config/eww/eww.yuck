@@ -121,7 +121,7 @@
 (defwidget r-network []
   (box :class "r-sec" :orientation "v" :space-evenly false
     (r-head :name "NETWORK" :accent "green")
-    (button :class "r-net" :onclick "alacritty -e nmtui & disown"
+    (button :class "r-net" :onclick "kitty -e nmtui & disown"
       (box :orientation "h" :space-evenly false :valign "center"
         (label :class "r-net-ico" :style "color: ${network.hex}" :text "${network.icon}")
         (box :orientation "v" :space-evenly false :hexpand true
