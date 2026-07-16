@@ -16,8 +16,15 @@ fi
 
 zgenom autoupdate
 
-# if the init scipt doesn't exist
-if ! zgenom saved; then
+# `zgenom saved` sources $ZGEN_INIT and then inherits the exit status of the
+# LAST plugin it loaded, so one plugin returning non-zero (fzf-docker does) makes
+# `saved` false and rebuilds the whole cache on every shell — ~1.4s instead of
+# ~0.1s. It is masked today only because powerlevel10k is loaded last and returns
+# 0. Test for the init file itself; a plugin's exit status is not a statement
+# about whether the cache exists.
+if [[ -f ${ZGEN_INIT} ]]; then
+  source ${ZGEN_INIT}
+else
   source ~/.zsh/completions.zsh
   source "${HOME}/.zsh/plugins"
   zgenom save
