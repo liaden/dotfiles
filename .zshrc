@@ -23,6 +23,9 @@ if ! zgenom saved; then
   zgenom save
 fi
 
+# Must precede any zsh_cache_source caller below.
+source ~/.zsh/cache.zsh
+
 source ~/.zsh/asdf.zsh
 
 # vim cli settings
@@ -52,7 +55,7 @@ export EDITOR=nvim
 export MANPAGER='nvim +Man!'
 export MANWIDTH=999
 
-command -v direnv > /dev/null  && eval "$(direnv hook zsh)"
+source ~/.zsh/direnv.zsh
 [ -f ~/.zsh_work ] && source ~/.zsh_work
 
 source ~/.zsh/chruby.zsh
