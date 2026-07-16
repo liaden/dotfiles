@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # day-brief — zero-decision morning start. First line is your first action.
 set -euo pipefail
+AUTO_CLAUDE_FEED_SOURCE=day-brief
 . "$HOME/.config/auto-claude/config.sh"
 
 cd "$WORK_REPO"
@@ -30,4 +31,4 @@ Review requests: $reviews
 Assigned issues: $issues
 Chore hopper: $hopper_items" | tee "$out"
 
-notify "Morning brief ready: $(head -n 1 "$out")"
+notify-feed day-brief "Morning brief" "$(cat "$out")"

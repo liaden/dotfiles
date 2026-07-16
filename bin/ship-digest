@@ -3,6 +3,7 @@
 # clipboard. Counter-evidence for "doesn't ship enough" is half perception;
 # this generates it while you do something else.
 set -euo pipefail
+AUTO_CLAUDE_FEED_SOURCE=ship-digest
 . "$HOME/.config/auto-claude/config.sh"
 
 cd "$WORK_REPO"
@@ -32,4 +33,4 @@ Merged: $merged
 Reviewed: $reviewed
 In flight: $inflight" | tee "$out" | clip
 
-notify "Weekly digest on clipboard (also in $out)"
+notify-feed ship-digest "Weekly digest (on clipboard)" "$(cat "$out")"

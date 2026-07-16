@@ -10,11 +10,13 @@
 # task stays in the hopper — widen the list here if a legitimate command
 # keeps getting denied. Never --dangerously-skip-permissions: work policy.
 set -euo pipefail
+AUTO_CLAUDE_FEED_SOURCE=chore-pr
 . "$HOME/.config/auto-claude/config.sh"
 
 item="$(head -n 1 "$HOPPER_FILE" 2>/dev/null || true)"
 if [ -z "$item" ]; then
   echo "$(date '+%F %T') hopper empty; nothing to do"
+  notify-feed chore-pr "Hopper empty" "No chores queued; nothing to do."
   exit 0
 fi
 echo "=== $(date '+%F %T') chore: $item"

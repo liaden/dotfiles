@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# notify-feed — the universal write path into the notification hub.
+#
+# Usage: notify-feed <source> <title> [body]
+#   If [body] is omitted, it is read from stdin (empty if stdin is a tty).
+#
+# Appends one NDJSON record to the spool and fires the macOS notification
+# bubble so behaviour for non-pane-watchers is preserved. Pure file +
+# notification: no auth/keychain/claude, so it works from the bare-env
+# launchd jobs (morning-update) and any future adapter.
+set -euo pipefail
+
+FEED_DIR="$HOME/.local/state/morning-feed"
+FEED="$FEED_DIR/feed.ndjson"
+
+source="${1:-}"
+title="${2:-}"
+if [ -z "$source" ] || [ -z "$title" ]; then
+  echo "usage: notify-feed <source> <title> [body]" >&2
+  exit 2
+fi
+
+# Body: third arg wins; otherwise read stdin (unless it's an interactive tty).
+if [ "$#" -ge 3 ]; then
+  body="$3"
+elif [ ! -t 0 ]; then
+  body="$(cat)"
+else
+  body=""
+fi
+
+mkdir -p "$FEED_DIR"
+
+# jq -n builds the record with safe escaping (quotes, newlines, etc.).
+jq -cn \
+  --arg ts "$(date '+%Y-%m-%dT%H:%M:%S')" \
+  --arg source "$source" \
+  --arg title "$title" \
+  --arg body "$body" \
+  '{ts:$ts, source:$source, title:$title, body:$body}' >> "$FEED"
+
+# Fire the macOS bubble too (best-effort; never fail the write on this).
+if command -v osascript >/dev/null 2>&1; then
+  osascript -e "display notification \"${title//\"/}\" with title \"${source//\"/}\"" 2>/dev/null || true
+elif command -v notify-send >/dev/null 2>&1; then
+  notify-send "$source" "$title" || true
+fi

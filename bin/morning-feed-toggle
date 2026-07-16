@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# morning-feed-toggle — open/close the on-demand feed sidebar in the current
+# tmux window. Bound to prefix + n (C-a n) in tmux.conf.
+#
+# If the current window has a live stored feed pane (@morning_feed_pane window
+# option), kill it. Otherwise split a 38-col pane on the LEFT (-hb) running the
+# watcher, remember its pane id, and return focus to the previous pane.
+set -uo pipefail
+
+pane="$(tmux show-window-options -v @morning_feed_pane 2>/dev/null || true)"
+
+# If we have a stored pane id and it still exists, this is a "close".
+if [ -n "$pane" ] && tmux list-panes -F '#{pane_id}' | grep -qxF "$pane"; then
+  tmux kill-pane -t "$pane"
+  tmux set-window-option -u @morning_feed_pane 2>/dev/null || true
+  exit 0
+fi
+
+# Open: new pane on the left, then store its id and hand focus back.
+new_pane="$(tmux split-window -hb -l 38 -P -F '#{pane_id}' 'morning-feed --watch')"
+tmux set-window-option @morning_feed_pane "$new_pane"
+tmux last-pane 2>/dev/null || true

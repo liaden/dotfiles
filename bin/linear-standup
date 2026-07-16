@@ -20,6 +20,8 @@ mkdir -p "$REPORT_DIR"
 report="$REPORT_DIR/$(date +%F).md"
 
 notify() {
+  # Durable feed entry (also fires the macOS bubble itself). Optional $2 body.
+  notify-feed linear-standup "$1" "${2:-}" 2>/dev/null || \
   if command -v osascript >/dev/null; then
     osascript -e "display notification \"${1//\"/}\" with title \"linear-standup\"" 2>/dev/null || true
   elif command -v notify-send >/dev/null; then
@@ -118,6 +120,7 @@ if [ "$nnew" -eq 0 ] && [ "$nchg" -eq 0 ]; then
   echo "# Linear standup $(date +%F)" | tee "$report"
   echo "" | tee -a "$report"
   echo "No changes to your assigned issues since the last run." | tee -a "$report"
+  notify "Linear standup: no changes" "No changes to your assigned issues since the last run."
 else
   if command -v claude >/dev/null 2>&1; then
     claude -p "Write a terse morning standup in markdown titled '# Linear standup $(date +%F)'
@@ -145,7 +148,7 @@ $diff_json" | tee "$report"
         + " — \(.url)"' <<<"$diff_json"
     } | tee "$report"
   fi
-  notify "Linear standup: $nnew new, $nchg changed"
+  notify "Linear standup: $nnew new, $nchg changed" "$(cat "$report")"
 fi
 
 # Advance the snapshot only after a successful report.

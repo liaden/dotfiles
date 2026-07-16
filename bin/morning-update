@@ -14,21 +14,30 @@ mkdir -p "$LOG_DIR"
 
 echo "=== $(date '+%F %T') morning-update start"
 
+brew_summary="brew skipped"
 if command -v brew >/dev/null 2>&1; then
   echo "--- brew update"
   brew update || echo "brew update failed (continuing)"
   echo "--- brew upgrade"
-  brew upgrade || echo "brew upgrade failed (continuing)"
+  # Count upgraded packages from the upgrade output for the feed summary.
+  upgraded="$(brew upgrade 2>&1 | tee /dev/stderr | grep -c '^==> Upgrading' || true)"
+  brew_summary="brew upgraded ${upgraded:-0}"
 else
   echo "brew not found; skipping"
 fi
 
+zgenom_summary="zgenom skipped"
 if [ -r "$HOME/.zgenom/zgenom.zsh" ]; then
   echo "--- zgenom update"
-  zsh -c 'source "$HOME/.zgenom/zgenom.zsh"; zgenom update' \
-    || echo "zgenom update failed (continuing)"
+  if zsh -c 'source "$HOME/.zgenom/zgenom.zsh"; zgenom update'; then
+    zgenom_summary="zgenom updated"
+  else
+    echo "zgenom update failed (continuing)"
+    zgenom_summary="zgenom update failed"
+  fi
 else
   echo "zgenom not found; skipping"
 fi
 
 echo "=== $(date '+%F %T') morning-update done"
+notify-feed morning-update "Toolbox updated" "$brew_summary; $zgenom_summary"

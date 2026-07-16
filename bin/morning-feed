@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# morning-feed — renderer for the notification hub spool.
+#
+#   morning-feed [--watch]            render once, then redraw on every spool
+#                                     change via fswatch (default mode)
+#   morning-feed --raw                dump plain text once (piping / quick look)
+#   morning-feed --source <name>      only show entries from <name>
+#
+# Reads ~/.local/state/morning-feed/feed.ndjson (one JSON record per line).
+# Newest-first, last 3 days only, compact layout for a ~38-col pane.
+set -euo pipefail
+
+FEED="$HOME/.local/state/morning-feed/feed.ndjson"
+# fswatch lives at /opt/homebrew/bin on macOS, /usr/bin or /usr/local/bin on
+# Linux — resolve off PATH, falling back to the Homebrew path if PATH is bare
+# (e.g. a minimal launchd/systemd env).
+FSWATCH="$(command -v fswatch || echo /opt/homebrew/bin/fswatch)"
+WIDTH=38
+
+mode="watch"
+filter=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --watch) mode="watch" ;;
+    --raw)   mode="raw" ;;
+    --source) shift; filter="${1:-}" ;;
+    *) echo "usage: morning-feed [--watch|--raw] [--source <name>]" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+# Stable ANSI color per source (256-color). Unknown sources hash to a color.
+color_for() {
+  case "$1" in
+    day-brief)      printf '38;5;39'  ;;  # blue
+    linear-standup) printf '38;5;170' ;;  # purple
+    chore-pr)       printf '38;5;214' ;;  # orange
+    ship-digest)    printf '38;5;42'  ;;  # green
+    morning-update) printf '38;5;245' ;;  # grey
+    github)         printf '38;5;204' ;;  # pink
+    *)
+      # Deterministic hue from the source name for unknown sources.
+      local sum=0 i c
+      for (( i=0; i<${#1}; i++ )); do
+        printf -v c '%d' "'${1:$i:1}"
+        sum=$(( (sum + c) % 6 ))
+      done
+      printf '38;5;%d' $(( 74 + sum * 6 ))
+      ;;
+  esac
+}
+
+# Records from the last 3 days, newest-first, tab-separated: ts src title body.
+recent_records() {
+  local cutoff
+  cutoff="$(date -v-2d '+%Y-%m-%d' 2>/dev/null || date -d '2 days ago' '+%Y-%m-%d')"
+  [ -f "$FEED" ] || return 0
+  jq -r --arg cutoff "$cutoff" --arg filter "$filter" '
+    select((.ts[0:10]) >= $cutoff)
+    | select($filter == "" or .source == $filter)
+    | [.ts, .source, .title, (.body // "")] | @tsv
+  ' "$FEED" 2>/dev/null | tail -r 2>/dev/null || \
+  jq -r --arg cutoff "$cutoff" --arg filter "$filter" '
+    select((.ts[0:10]) >= $cutoff)
+    | select($filter == "" or .source == $filter)
+    | [.ts, .source, .title, (.body // "")] | @tsv
+  ' "$FEED" 2>/dev/null | tac
+}
+
+# Emit ANSI-formatted feed. Arg1: 1 = color, 0 = plain.
+emit() {
+  local color="$1" body_col=$(( WIDTH - 2 ))
+  local ts src title body hhmm c reset='' dim='' bold=''
+  if [ "$color" = 1 ]; then reset=$'\033[0m'; dim=$'\033[2m'; bold=$'\033[1m'; fi
+
+  while IFS=$'\t' read -r ts src title body; do
+    [ -z "$ts" ] && continue
+    hhmm="${ts:11:5}"
+    if [ "$color" = 1 ]; then c=$'\033['"$(color_for "$src")"'m'; else c=''; fi
+    printf '%s%s%s  %s%s%s\n' "$dim" "$hhmm" "$reset" "$c" "$src" "$reset"
+    if [ -n "$title" ]; then
+      printf '%s\n' "$title" | fold -s -w "$body_col" | while IFS= read -r line; do
+        printf '  %s%s%s\n' "$bold" "$line" "$reset"
+      done
+    fi
+    # Body: unescape literal \n from JSON into real lines, wrap each.
+    if [ -n "$body" ]; then
+      printf '%b\n' "$body" | while IFS= read -r bline; do
+        if [ -z "$bline" ]; then printf '\n'; continue; fi
+        printf '%s\n' "$bline" | fold -s -w "$body_col" | while IFS= read -r line; do
+          printf '  %s%s%s\n' "$dim" "$line" "$reset"
+        done
+      done
+    fi
+    printf '\n'
+  done
+}
+
+render() {
+  clear
+  printf '\033[1m── Feed · %s ──\033[0m\n\n' "$(date '+%a %b %d')"
+  local out
+  out="$(recent_records | emit 1)"
+  if [ -z "$out" ]; then
+    printf '\033[2m(no entries in the last 3 days)\033[0m\n'
+  else
+    printf '%s\n' "$out"
+  fi
+}
+
+case "$mode" in
+  raw)
+    recent_records | emit 0
+    ;;
+  watch)
+    render
+    if [ -x "$FSWATCH" ]; then
+      # -o batches events into a single "changed" signal per burst.
+      "$FSWATCH" -o "$FEED" "$(dirname "$FEED")" 2>/dev/null | while read -r _; do
+        render
+      done
+    else
+      echo "fswatch not found at $FSWATCH; rendered once only." >&2
+    fi
+    ;;
+esac
