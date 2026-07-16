@@ -1,0 +1,11 @@
+[Unit]
+Description=Run MemPalace refresh hourly
+
+[Timer]
+OnBootSec=10min
+OnUnitInactiveSec=1h
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

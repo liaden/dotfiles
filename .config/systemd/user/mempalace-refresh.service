@@ -1,0 +1,12 @@
+[Unit]
+Description=MemPalace freshness refresh (incremental re-mine of repos + Claude chats)
+After=homebrew.ollama.service
+Wants=homebrew.ollama.service
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+ExecStart=%h/.mempalace/refresh.sh
+StandardOutput=append:%h/.mempalace/refresh.log
+StandardError=append:%h/.mempalace/refresh.log

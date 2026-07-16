@@ -1,0 +1,12 @@
+[Unit]
+Description=Run morning-update daily
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+# Desktop is not always up at 08:00 — catch up on the next boot instead of
+# skipping the day entirely.
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

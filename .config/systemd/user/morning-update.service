@@ -1,0 +1,17 @@
+[Unit]
+Description=Morning toolbox update (brew formulae + zgenom plugins)
+Documentation=file://%h/bin/morning-update
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+# The user manager's PATH omits Homebrew, so `command -v brew` would miss and
+# the job would quietly no-op its main purpose. notify-feed needs jq, which
+# also lives in the Homebrew prefix.
+Environment=PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:%h/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/bin/morning-update
+# Logs are state, not config: XDG_STATE_HOME, matching notify-feed's
+# ~/.local/state/morning-feed.
+StandardOutput=append:%h/.local/state/morning-update/morning-update.log
+StandardError=append:%h/.local/state/morning-update/morning-update.log
