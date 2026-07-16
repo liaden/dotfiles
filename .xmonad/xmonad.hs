@@ -8,19 +8,21 @@
 import XMonad
 import XMonad.Layout.Fullscreen
     ( fullscreenManageHook, fullscreenSupport, fullscreenFull )
-import Data.Monoid ()
+import Data.Monoid ( All(..) )
 import System.Exit ()
 import XMonad.Util.SpawnOnce ( spawnOnce )
 import XMonad.Util.NamedScratchpad
 import XMonad.Actions.Submap
 import Graphics.X11.ExtraTypes.XF86 (xF86XK_AudioLowerVolume, xF86XK_AudioRaiseVolume, xF86XK_AudioMute, xF86XK_MonBrightnessDown, xF86XK_MonBrightnessUp, xF86XK_AudioPlay, xF86XK_AudioPrev, xF86XK_AudioNext)
 import XMonad.Hooks.EwmhDesktops ( ewmh, ewmhFullscreen )
-import Control.Monad ( join, when )
+import Control.Monad ( join, when, unless )
+import Data.Typeable ( Typeable )
+import qualified XMonad.Util.ExtensibleState as XS
 import XMonad.Layout.NoBorders
 import XMonad.Hooks.ManageDocks
     ( avoidStruts, docks, manageDocks )
 import XMonad.Util.Types ( Direction2D(..) )
-import XMonad.Hooks.ManageHelpers ( doFullFloat, isFullscreen )
+import XMonad.Hooks.ManageHelpers ( doFullFloat, isFullscreen, isInProperty )
 import XMonad.Layout.Spacing ( spacingRaw, Border(Border) )
 import XMonad.Layout.PerScreen
 import XMonad.Layout.Column
@@ -340,7 +342,9 @@ rectCentered percentage = W.RationalRect offset offset percentage percentage
 -- 'className' and 'resource' are used below.
 --
 myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+> manageDocks <+> composeAll
-    [ className =? "MPlayer"        --> doFloat
+    [ isInProperty "_NET_WM_WINDOW_TYPE" "_NET_WM_WINDOW_TYPE_POPUP_MENU" --> doIgnore
+    , isInProperty "_NET_WM_WINDOW_TYPE" "_NET_WM_WINDOW_TYPE_MENU"       --> doIgnore
+    , className =? "MPlayer"        --> doFloat
     , className =? "Gimp"           --> doFloat
     , resource  =? "desktop_window" --> doIgnore
     , resource  =? "kdesktop"       --> doIgnore
@@ -350,13 +354,38 @@ myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+
 ------------------------------------------------------------------------
 -- Event handling
 
--- * EwmhDesktops users should change this to ewmhDesktopsEventHook
---
--- Defines a custom handler function for X Events. The function should
--- return (All True) if the default handler is to be run afterwards. To
--- combine event hooks use mappend or mconcat from Data.Monoid.
---
-myEventHook = mempty
+-- ExtensibleState to track popup windows that sent _NET_ACTIVE_WINDOW.
+-- After ewmh resets _NET_ACTIVE_WINDOW to Steam, popupActiveWindowHook
+-- overrides it back to the popup so CEF keeps the menu open.
+newtype PendingPopup = PendingPopup (Maybe Window) deriving Typeable
+instance ExtensionClass PendingPopup where
+    initialValue = PendingPopup Nothing
+
+myEventHook :: Event -> X All
+myEventHook (ClientMessageEvent { ev_window = w, ev_message_type = mt }) = do
+    netActive <- getAtom "_NET_ACTIVE_WINDOW"
+    when (mt == netActive) $ do
+        managed <- isClient w
+        unless managed $ XS.put (PendingPopup (Just w))
+    return (All True)
+myEventHook _ = return (All True)
+
+-- Run this AFTER ewmh's logHook to restore _NET_ACTIVE_WINDOW and X11 focus
+-- to the popup. ewmh's windows(W.focusWindow popup) resets both back to Steam,
+-- which causes CEF to see FocusOut on the popup and dismiss it.
+popupActiveWindowHook :: X ()
+popupActiveWindowHook = do
+    PendingPopup mpw <- XS.get
+    case mpw of
+        Nothing -> return ()
+        Just pw -> do
+            XS.put (PendingPopup Nothing)
+            r <- asks theRoot
+            withDisplay $ \dpy -> do
+                a_naw <- getAtom "_NET_ACTIVE_WINDOW"
+                a_win <- getAtom "WINDOW"
+                io $ changeProperty32 dpy r a_naw a_win propModeReplace [fromIntegral pw]
+                io $ setInputFocus dpy pw revertToPointerRoot 0
 
 
 ------------------------------------------------------------------------
@@ -393,7 +422,9 @@ myStartupHook = do
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
-main = xmonad $ fullscreenSupport $ docks $ ewmhFullscreen $ ewmh defaults
+main = xmonad $ fullscreenSupport $ docks $ ewmhFullscreen $
+    let ewmhCfg = ewmh defaults
+    in ewmhCfg { logHook = logHook ewmhCfg <+> popupActiveWindowHook }
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will

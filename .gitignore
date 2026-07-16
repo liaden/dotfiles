@@ -178,3 +178,4 @@ VirtualBox VMs
 .xmonad/xmonad.hi
 .xmonad/xmonad.o
 .xmonad/xmonad.errors
+.xmonad/build-*/
