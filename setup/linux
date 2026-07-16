@@ -43,6 +43,13 @@ setup/rust
 
 brew install zsh && chsh -s "$(which zsh)"
 
+# morning-update runs off launchd on the mac; systemd --user is the equivalent
+# here. Units ship with the dotfiles, so this only has to enable them.
+# systemd opens the log file before ExecStart, so the dir must already exist.
+mkdir -p ~/.local/state/morning-update
+systemctl --user daemon-reload
+systemctl --user enable --now morning-update.timer
+
 function configure_user() {
   echo "Coniguring user $1"
   sudo -E su "$1"
