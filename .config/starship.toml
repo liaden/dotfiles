@@ -113,20 +113,29 @@ symbol = " "
 # p10k's asdf segment has no starship equivalent; the per-language modules read
 # .tool-versions. ASDF_PROMPT_ALWAYS_SHOW=false, so these stay near-silent.
 [nodejs]
-style = "fg:0 bg:2"
-format = "[ $symbol$version ]($style)"
+symbol = " "
+style = "fg:2"
+format = "([ $symbol$version ]($style))"
+
 [ruby]
-style = "fg:0 bg:1"
-format = "[ $symbol$version ]($style)"
+symbol = " "
+style = "fg:1"
+format = "([ $symbol$version ]($style))"
+
 [python]
-style = "fg:0 bg:4"
-format = "[ $symbol$version ]($style)"
+symbol = " "
+style = "fg:4"
+format = "([ $symbol$version ]($style))"
+
 [golang]
-style = "fg:0 bg:4"
-format = "[ $symbol$version ]($style)"
+symbol = " "
+style = "fg:4"
+format = "([ $symbol$version ]($style))"
+
 [rust]
-style = "fg:0 bg:208"
-format = "[ $symbol$version ]($style)"
+symbol = " "
+style = "fg:208"
+format = "([ $symbol$version ]($style))"
 
 # = CONTEXT_TEMPLATE '%n@%m'
 [username]
