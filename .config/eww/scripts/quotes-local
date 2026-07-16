@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Self-contained quote source for eww. Picks a random entry from the bundled
+# quotes.json and emits ONE JSON line: {main, tail, author}. Long quotes are
+# split across two lines (main/tail) at a word boundary, matching the old look.
+# No /tmp/xmonad dependency.
+
+JSON="$HOME/.config/eww/scripts/quotes.json"
+
+emit() { jq -cn --arg m "$1" --arg t "$2" --arg a "$3" '{main:$m,tail:$t,author:$a}'; }
+
+if [ ! -r "$JSON" ]; then
+  emit "Stay curious." "" "Unknown"
+  exit 0
+fi
+
+n=$(jq 'length' "$JSON")
+i=$(( RANDOM % n ))
+text=$(jq -r ".[$i].text" "$JSON")
+author=$(jq -r ".[$i].author // \"Unknown\"" "$JSON")
+
+if [ "${#text}" -le 58 ]; then
+  emit "$text" "" "$author"
+else
+  mid=$(( ${#text} / 2 ))
+  rest="${text:mid}"          # split at the first space at/after the midpoint
+  head_of_rest="${rest%% *}"
+  cut=$(( mid + ${#head_of_rest} + 1 ))
+  emit "${text:0:cut}" "${text:cut}" "$author"
+fi

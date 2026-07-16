@@ -1,2 +1,6 @@
 #!/bin/bash
-amixer -D pulse sget Master | grep 'Left:' | awk -F'[][]' '{ print $2 }' | tr -d '%'
+# Current output volume as an integer percent, via PipeWire (wpctl).
+# (This machine runs pipewire/wireplumber; the old `amixer -D pulse` path is dead.)
+vol=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print $2}')
+if [ -z "$vol" ]; then echo 0; exit 0; fi
+awk -v v="$vol" 'BEGIN{ printf "%d\n", v*100 }'

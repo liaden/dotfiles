@@ -1,0 +1,250 @@
+;; ============================================================================
+;;  eww.yuck  — port of the old eww.xml (eww 0.1.0) to the yuck DSL (git master)
+;;  Window names and CSS class names are preserved so eww.scss and the xmonad
+;;  ~/.xmonad/bin/eww-toggle launcher keep working unchanged.
+;; ============================================================================
+
+;; ----------------------------------------------------------------------------
+;;  Variables
+;; ----------------------------------------------------------------------------
+
+;; --- Window-open state (set by ~/.xmonad/bin/eww-toggle) ---
+;; Gates :run-while below so 1s polls only run while the group is visible.
+(defvar sidebar-open false)
+(defvar dashboard-open false)
+
+;; --- Music (event-driven via playerctl --follow; no polling) ---
+;; music-follow emits {display, artist, stat}; cover art is a static path the
+;; script refreshes on track change.
+(deflisten music :initial `{"display":"Nothing Playing...","artist":"","stat":""}` `~/.config/eww/scripts/music-follow`)
+(defvar cover "/tmp/xmonad/spotify/cover.png")
+
+;; --- Volume / brightness (only poll while the sidebar is shown) ---
+(defpoll volume :interval "1s" :initial "0" :run-while sidebar-open `~/.config/eww/scripts/getvol`)  ; was 3ms
+(defpoll bright :interval "1s" :initial "0" :run-while sidebar-open `~/.config/eww/scripts/getbri`)  ; was 1ms
+
+;; --- Date / time comes from the built-in EWW_TIME + formattime() (no date polls) ---
+
+;; --- Weather (self-contained; one JSON poll -> whole widget) ---
+(defpoll weather :interval "20m" :initial "{}" `~/.config/eww/scripts/weather`)
+
+;; --- Network status (nmcli; only polls while the sidebar is shown) ---
+(defpoll network :interval "5s" :initial "{}" :run-while sidebar-open `~/.config/eww/scripts/network`)
+
+;; --- RAM comes from the built-in EWW_RAM magic variable (no getram poll) ---
+
+;; --- Battery ---
+(defpoll battery-remaining :interval "2m" :initial "0" `cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo 0`)
+(defpoll bat-icon          :interval "2m" `~/.config/tint2/scripts/battery.sh`)
+
+;; --- Hardware presence: hide meters this machine can't drive (no backlight/battery) ---
+(defpoll has-backlight :interval "1h" :initial "false" `[ -n "$(ls /sys/class/backlight 2>/dev/null)" ] && echo true || echo false`)
+(defpoll has-battery   :interval "1h" :initial "false" `[ -e /sys/class/power_supply/BAT0 ] && echo true || echo false`)
+
+;; --- Home-dir shortcuts ---
+(defpoll l1 :interval "20h" `~/.config/eww/scripts/home-dir/l1`)
+(defpoll l2 :interval "20h" `~/.config/eww/scripts/home-dir/l2`)
+(defpoll l3 :interval "20h" `~/.config/eww/scripts/home-dir/l3`)
+(defpoll l4 :interval "20h" `~/.config/eww/scripts/home-dir/l4`)
+(defpoll l5 :interval "20h" `~/.config/eww/scripts/home-dir/l5`)
+(defpoll l6 :interval "20h" `~/.config/eww/scripts/home-dir/l6`)
+
+;; --- Quote (self-contained; one JSON poll from bundled quotes.json) ---
+(defpoll quote :interval "10m" :initial "{}" `~/.config/eww/scripts/quotes-local`)
+
+
+;; ----------------------------------------------------------------------------
+;;  Widgets
+;; ----------------------------------------------------------------------------
+
+(defwidget r-head [name accent]
+  (box :class "r-head" :orientation "h" :space-evenly false :valign "center"
+    (box :class "r-tick r-tick-${accent}")
+    (label :class "r-eyebrow" :halign "start" :text name)
+    (box :class "r-head-rule" :hexpand true :valign "center" :vexpand false)))
+
+(defwidget r-meter [cls icon value active onchange]
+  (box :class "r-meter" :orientation "h" :space-evenly false :valign "center"
+    (label :class "r-meter-ico ${cls}" :text icon)
+    (scale :class "r-scale ${cls}" :hexpand true :min 0 :max 101 :value value :active active :onchange onchange)
+    (label :class "r-meter-val" :halign "end" :text "${value}")))
+
+(defwidget r-clock []
+  (box :class "r-sec" :orientation "v" :space-evenly false
+    (r-head :name "TIME" :accent "pink")
+    (label :class "r-clock" :halign "start" :text "${formattime(EWW_TIME, '%H:%M')}")
+    (label :class "r-clock-sub" :halign "start" :text "${formattime(EWW_TIME, '%A')}  ·  ${formattime(EWW_TIME, '%d %b')}")))
+
+(defwidget r-weather []
+  (box :class "r-sec" :orientation "v" :space-evenly false
+    (r-head :name "WEATHER" :accent "blue")
+    (box :orientation "h" :space-evenly false :valign "center"
+      (label :class "r-wx-ico" :style "color: ${weather.hex}" :text "${weather.icon}")
+      (box :orientation "v" :space-evenly false :hexpand true
+        (box :orientation "h" :space-evenly false :valign "end"
+          (label :class "r-wx-temp" :text "${weather.temp}")
+          (label :class "r-wx-cond" :hexpand true :halign "end" :text "${weather.stat}"))
+        (box :orientation "h" :space-evenly false
+          (label :class "r-wx-sub" :halign "start" :text "${weather.quote}")
+          (label :class "r-wx-sub" :hexpand true :halign "end" :text "${weather.quote2}"))))))
+
+(defwidget r-media []
+  (box :class "r-sec" :orientation "v" :space-evenly false
+    (r-head :name "NOW PLAYING" :accent "violet")
+    (box :orientation "h" :space-evenly false :valign "center"
+      (box :class "r-art" :style "background-image: url('${cover}');" "")
+      (box :orientation "v" :space-evenly false :hexpand true
+        (label :class "r-track" :halign "start" :limit-width 22 :text "${music.display}")
+        (label :class "r-artist" :halign "start" :limit-width 24 :text "${music.artist}")
+        (box :class "r-mbtns" :orientation "h" :space-evenly false :halign "start"
+          (button :class "r-mbtn" :onclick "playerctl previous" "")
+          (button :class "r-mbtn r-mplay" :onclick "playerctl play-pause" "${music.stat}")
+          (button :class "r-mbtn" :onclick "playerctl next" ""))))))
+
+(defwidget r-system []
+  (box :class "r-sec" :orientation "v" :space-evenly false
+    (r-head :name "SYSTEM" :accent "coral")
+    (r-meter :cls "m-vol" :icon "" :active true  :onchange "~/.config/eww/scripts/setvol {}" :value volume)
+    ;; revealer, not `:visible`: a hidden `:visible` box still reserves its height
+    ;; in the size request, and the unused space falls to the bottom of the rail.
+    (revealer :reveal has-backlight :transition "none"
+      (r-meter :cls "m-bri" :icon "" :active true  :onchange "~/.config/eww/scripts/setbri {}" :value bright))
+    (r-meter :cls "m-cpu" :icon "" :active false :onchange "" :value {round(EWW_CPU.avg, 0)})
+    (r-meter :cls "m-ram" :icon "" :active false :onchange "" :value {round(EWW_RAM.used_mem_perc, 0)})
+    (revealer :reveal has-battery :transition "none"
+      (r-meter :cls "m-bat" :icon "" :active false :onchange "" :value battery-remaining))
+    (box :class "r-graph-wrap" :orientation "v" :space-evenly false
+      (label :class "r-cap" :halign "start" :text "CPU LOAD  ·  90S")
+      (box :class "r-graph-box"
+        (graph :class "r-graph" :vexpand true :value {EWW_CPU.avg} :time-range "90s" :min 0 :max 100 :thickness 2)))))
+
+(defwidget r-network []
+  (box :class "r-sec" :orientation "v" :space-evenly false
+    (r-head :name "NETWORK" :accent "green")
+    (button :class "r-net" :onclick "alacritty -e nmtui & disown"
+      (box :orientation "h" :space-evenly false :valign "center"
+        (label :class "r-net-ico" :style "color: ${network.hex}" :text "${network.icon}")
+        (box :orientation "v" :space-evenly false :hexpand true
+          (label :class "r-net-name" :halign "start" :text "${network.name}")
+          (label :class "r-net-ip" :halign "start" :text "${network.detail}"))))))
+
+(defwidget r-launch []
+  (box :class "r-sec" :orientation "v" :space-evenly false
+    (r-head :name "LAUNCH" :accent "blue")
+    (button :class "r-search" :onclick "~/.xmonad/bin/eww-toggle sidebar close && ~/.config/rofi/scripts/launcher.sh type-7 style-4"
+      (box :orientation "h" :halign "start" :space-evenly false :valign "center"
+        (label :class "r-search-ico" :text "")
+        (label :class "r-search-txt" :text "Search…")))))
+
+(defwidget r-power []
+  (box :class "r-sec" :orientation "v" :space-evenly false
+    (r-head :name "POWER" :accent "pink")
+    (box :class "r-pw" :orientation "h" :space-evenly true
+      (button :class "r-pw-btn pw-shutdown" :onclick "~/.xmonad/bin/eww-toggle sidebar close && ~/.config/eww/scripts/shutdown.sh" "")
+      (button :class "r-pw-btn pw-reboot"   :onclick "~/.xmonad/bin/eww-toggle sidebar close && ~/.config/eww/scripts/reboot.sh" "")
+      (button :class "r-pw-btn pw-lock"     :onclick "~/.xmonad/bin/eww-toggle sidebar close && ~/.config/eww/scripts/lockscreen.sh" "")
+      (button :class "r-pw-btn pw-suspend"  :onclick "~/.xmonad/bin/eww-toggle sidebar close && ~/.config/eww/scripts/suspend.sh" "")
+      (button :class "r-pw-btn pw-logout"   :onclick "~/.xmonad/bin/eww-toggle sidebar close && ~/.config/eww/scripts/logout.sh" ""))))
+
+(defwidget sidebar []
+  (box :class "rail" :orientation "v" :space-evenly false
+    (r-clock)
+    (r-weather)
+    (r-media)
+    (r-system)
+    (r-network)
+    (r-launch)
+    (r-power)))
+
+
+;; ===== Dashboard (Mod+p) — one centered Console card grid =====
+
+(defwidget d-clock []
+  (box :class "d-card" :orientation "v" :space-evenly false :hexpand true
+    (r-head :name "TIME" :accent "pink")
+    (label :class "d-clock" :halign "start" :text "${formattime(EWW_TIME, '%H:%M')}")
+    (label :class "d-clock-day" :halign "start" :text "${formattime(EWW_TIME, '%A')}")
+    (label :class "d-clock-date" :halign "start" :text "${formattime(EWW_TIME, '%d %B %Y')}")))
+
+(defwidget d-profile []
+  (box :class "d-card d-profile" :orientation "v" :space-evenly false
+    (r-head :name "PROFILE" :accent "violet")
+    (box :class "d-pfp" :halign "center" "")
+    (label :class "d-name" :halign "center" :text "joel")
+    (label :class "d-tag" :halign "center" :text "xmonad · rust · postgres")))
+
+(defwidget d-weather []
+  (box :class "d-card" :orientation "v" :space-evenly false :hexpand true
+    (r-head :name "WEATHER" :accent "blue")
+    (box :orientation "h" :space-evenly false :valign "center"
+      (label :class "d-wx-ico" :style "color: ${weather.hex}" :text "${weather.icon}")
+      (box :orientation "v" :space-evenly false :hexpand true
+        (label :class "d-wx-temp" :halign "start" :text "${weather.temp}")
+        (label :class "d-wx-cond" :halign "start" :text "${weather.stat}")))
+    (label :class "d-wx-sub" :halign "start" :text "${weather.quote}  ·  ${weather.quote2}")))
+
+(defwidget d-quote []
+  (box :class "d-card" :orientation "v" :space-evenly false :hexpand true
+    (r-head :name "QUOTE" :accent "green")
+    ;; No :limit-width — eww turns on pango ellipsize whenever it is set, and
+    ;; ellipsize and :wrap are mutually exclusive, so it would force one line.
+    (label :class "d-quote-main" :halign "start" :wrap true :text "${quote.main}${quote.tail}")
+    (label :class "d-quote-author" :halign "end" :text "— ${quote.author}")))
+
+(defwidget d-folder [cls path]
+  (button :class "d-folder ${cls}" :onclick "nautilus ~/${path}"
+    (box :orientation "h" :space-evenly false :valign "center"
+      (label :class "d-folder-ico" :text "")
+      (label :class "d-folder-txt" :halign "start" :text path))))
+
+(defwidget d-folders []
+  (box :class "d-card" :orientation "v" :space-evenly false
+    (r-head :name "FOLDERS" :accent "amber")
+    (d-folder :cls "fl1" :path l1)
+    (d-folder :cls "fl2" :path l2)
+    (d-folder :cls "fl3" :path l3)
+    (d-folder :cls "fl4" :path l4)
+    (d-folder :cls "fl5" :path l5)
+    (d-folder :cls "fl6" :path l6)))
+
+(defwidget d-actions []
+  (box :class "d-card d-actions" :orientation "h" :space-evenly false :valign "center"
+    (button :class "d-search" :hexpand true :onclick "~/.config/rofi/scripts/launcher.sh type-7 style-4"
+      (box :orientation "h" :halign "start" :space-evenly false :valign "center"
+        (label :class "d-search-ico" :text "")
+        (label :class "d-search-txt" :text "Search…")))
+    (button :class "d-act d-shot" :onclick "~/.config/eww/scripts/screenshot" "")
+    (button :class "d-act d-priv" :onclick "firefox -private-window" "")
+    (box :class "d-act-sep")
+    (button :class "d-act pw-shutdown" :onclick "~/.config/eww/scripts/shutdown.sh" "")
+    (button :class "d-act pw-reboot"   :onclick "~/.config/eww/scripts/reboot.sh" "")
+    (button :class "d-act pw-lock"     :onclick "~/.config/eww/scripts/lockscreen.sh" "")
+    (button :class "d-act pw-suspend"  :onclick "~/.config/eww/scripts/suspend.sh" "")
+    (button :class "d-act pw-logout"   :onclick "~/.config/eww/scripts/logout.sh" "")))
+
+(defwidget dashboard []
+  (box :class "dash" :orientation "v" :space-evenly false
+    (box :class "dash-row" :orientation "h" :space-evenly false
+      (d-profile)
+      (d-clock)
+      (d-weather))
+    (box :class "dash-row" :orientation "h" :space-evenly false
+      (d-quote)
+      (d-folders))
+    (d-actions)))
+
+;; ----------------------------------------------------------------------------
+;;  Windows
+;; ----------------------------------------------------------------------------
+
+;; --- Sidebar rail (Mod+s) ---
+(defwindow sidebar
+  :geometry (geometry :x "24px" :y "0px" :width "400px" :anchor "center left")
+  :stacking "fg" :wm-ignore true
+  (sidebar))
+
+;; --- Dashboard (Mod+p) — single centered panel ---
+(defwindow dashboard
+  :geometry (geometry :x "0px" :y "0px" :width "1560px" :height "720px" :anchor "center")
+  :stacking "fg" :wm-ignore true
+  (dashboard))

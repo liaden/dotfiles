@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Network status for the eww sidebar (nmcli). Emits one JSON line:
+# {icon, name, detail, hex}. Wired-only box today; auto-shows wifi SSID if a
+# wireless adapter ever appears. Click-to-manage is handled by the widget (nmtui).
+WIFI=$(printf '')       # nf-fa-wifi
+WIRED=$(printf '')      # nf-fa-network-wired
+OFF=$(printf '')        # nf-fa-ban
+
+emit() { jq -cn --arg icon "$1" --arg name "$2" --arg detail "$3" --arg hex "$4" \
+  '{icon:$icon,name:$name,detail:$detail,hex:$hex}'; }
+
+# First active real (wifi/ethernet) connection; ignore lo/docker/bridge/tun.
+line=$(nmcli -t -f NAME,TYPE,DEVICE connection show --active 2>/dev/null \
+  | grep -E ':(802-11-wireless|802-3-ethernet):' | head -1)
+
+if [ -z "$line" ]; then
+  emit "$OFF" "Disconnected" "" "#D35D6E"
+  exit 0
+fi
+
+IFS=':' read -r name type dev <<<"$line"
+ip=$(nmcli -t -f IP4.ADDRESS device show "$dev" 2>/dev/null | head -1 | cut -d: -f2)
+ip="${ip%%/*}"
+
+if [ "$type" = "802-11-wireless" ]; then
+  ssid=$(nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | awk -F: '$1=="yes"{print $2; exit}')
+  emit "$WIFI" "${ssid:-$name}" "$ip" "#90c861"
+else
+  emit "$WIRED" "$name" "$ip" "#90c861"
+fi

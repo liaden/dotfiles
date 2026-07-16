@@ -1,0 +1,3 @@
+#!/bin/bash
+# Set output volume (PipeWire). Arg is the eww scale value (may be a float).
+wpctl set-volume @DEFAULT_AUDIO_SINK@ "$(printf '%.0f' "$1")%"

@@ -1,2 +1,8 @@
 #!/bin/bash
-brightnessctl -m -d intel_backlight | awk -F, '{print substr($4, 0, length($4)-1)}' | tr -d '%'
+# Current backlight brightness as an integer percent.
+# NOTE: this machine currently exposes NO backlight device (empty
+# /sys/class/backlight), so this falls back to 0 and the brightness slider is
+# effectively inert until a controllable display/backlight is present.
+pct=$(brightnessctl -m 2>/dev/null | awk -F, 'NR==1{gsub(/%/,"",$4); print $4}')
+if [ -z "$pct" ]; then echo 0; exit 0; fi
+echo "$pct"

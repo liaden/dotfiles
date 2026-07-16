@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Event-driven player state for eww (deflisten): one JSON line per change,
+# {display, artist, stat}. Replaces the old 5s gettitle/music2/musicstat polls.
+PLAY=$(printf '')    # nf-fa-play  (shown when paused/stopped)
+PAUSE=$(printf '')   # nf-fa-pause (shown when playing)
+
+emit() {
+  local status="$1" title="$2" artist="$3" display stat
+  # refresh cover art for the current track (side-effect; event-driven, not polled)
+  ~/.config/eww/scripts/getart >/dev/null 2>&1 &
+  if [ -z "$title" ]; then
+    display="Nothing Playing..."
+  elif [ "${#title}" -le 18 ]; then
+    display="$title"
+  else
+    display="$(printf '%s' "$title" | awk '{print $1, $2}')..."
+  fi
+  case "$status" in
+    Playing) stat="$PAUSE" ;;
+    *)       stat="$PLAY" ;;
+  esac
+  jq -cn --arg display "$display" --arg artist "$artist" --arg stat "$stat" \
+    '{display:$display,artist:$artist,stat:$stat}'
+}
+
+# initial snapshot, then stream changes (tab-delimited to survive spaces in titles)
+emit "$(playerctl status 2>/dev/null)" "$(playerctl metadata title 2>/dev/null)" "$(playerctl metadata artist 2>/dev/null)"
+playerctl --follow metadata --format $'{{status}}\t{{title}}\t{{artist}}' 2>/dev/null |
+while IFS=$'\t' read -r status title artist; do
+  emit "$status" "$title" "$artist"
+done

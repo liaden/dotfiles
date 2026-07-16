@@ -1,0 +1,4 @@
+#!/bin/bash
+# Set backlight brightness. Arg is the eww scale value (may be a float).
+# No-op on machines without a backlight device (see getbri).
+brightnessctl -m set "$(printf '%.0f' "$1")%" >/dev/null 2>&1

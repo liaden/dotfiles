@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Self-contained weather source for eww. Emits ONE JSON line so the whole
+# weather widget is driven by a single defpoll (one network call / interval).
+# No /tmp/xmonad dependency. Location auto-detects by IP; override with
+# EWW_WEATHER_LOCATION (e.g. "Portland" or "97201").
+#
+# JSON fields consumed by eww:
+#   icon       Nerd Font weather glyph (nf-weather, U+E3xx — stable across NF v3)
+#   hex        color for the glyph
+#   temp       current temperature, e.g. "+72°F"
+#   stat       condition text, e.g. "Partly cloudy"
+#   stat_side  short condition (<=9 chars, else truncated) for the sidebar
+#   quote      first tail line (feels-like)
+#   quote2     second tail line (moon phase)
+
+loc="${EWW_WEATHER_LOCATION:-}"
+
+emit() { # icon hex temp stat statside quote quote2
+  jq -cn --arg icon "$1" --arg hex "$2" --arg temp "$3" --arg stat "$4" \
+         --arg stat_side "$5" --arg quote "$6" --arg quote2 "$7" \
+    '{icon:$icon,hex:$hex,temp:$temp,stat:$stat,stat_side:$stat_side,quote:$quote,quote2:$quote2}'
+}
+
+# %C condition, %t temp, %f feels-like, %m moon phase — pipe-delimited, one line.
+raw=$(curl -sf --max-time 12 "https://wttr.in/${loc}?format=%C|%t|%f|%m" 2>/dev/null)
+if [ -z "$raw" ]; then
+  emit "" "#D35D6E" "--" "Unavailable" "Unavail" "No connection" ""
+  exit 0
+fi
+
+IFS='|' read -r cond temp feels moon <<<"$raw"
+temp="$(echo "$temp" | tr -d ' ')"; temp="${temp#+}"   # drop wttr's leading '+', keep '-'
+feels="$(echo "$feels" | tr -d ' ')"; feels="${feels#+}"
+cond="$(echo "$cond" | sed 's/^ *//;s/ *$//')"
+
+# Map condition text -> glyph + color. Keyword match, most specific first.
+shopt -s nocasematch
+case "$cond" in
+  *thunder*|*storm*)          icon=""; hex="#c47eb7" ;;  # wi-thunderstorm
+  *blizzard*|*snow*|*sleet*|*ice*) icon=""; hex="#ffffff" ;;  # wi-snow
+  *"heavy rain"*|*"moderate rain"*|*shower*) icon=""; hex="#84afdb" ;;  # wi-showers
+  *rain*|*drizzle*)           icon=""; hex="#84afdb" ;;  # wi-rain
+  *fog*|*mist*|*haze*)        icon=""; hex="#A5b3c0" ;;  # wi-fog
+  *"partly"*|*"partial"*)     icon=""; hex="#90c861" ;;  # wi-day-cloudy
+  *overcast*|*cloud*)         icon=""; hex="#A5b3c0" ;;  # wi-cloudy
+  *sunny*)                    icon=""; hex="#ffb86c" ;;  # wi-day-sunny
+  *clear*)                    icon=""; hex="#84afdb" ;;  # wi-night-clear
+  *)                          icon=""; hex="#D35D6E" ;;  # wi-na
+esac
+shopt -u nocasematch
+
+# Sidebar wants a short label.
+if [ "${#cond}" -le 9 ]; then stat_side="$cond"; else stat_side="${cond:0:6}..."; fi
+
+emit "$icon" "$hex" "$temp" "$cond" "$stat_side" "Feels like $feels" "Moon $moon"

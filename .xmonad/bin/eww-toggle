@@ -3,29 +3,11 @@
 require "set"
 
 SIDEBAR=%w[
-  weather_side
-  time_side
-  smol_calendar
-  player_side
-  sys_side
-  sliders_side
+  sidebar
 ]
 
 DASHBOARD=%w[
-  blur_full
-  weather
-  profile
-  quote
-  search_full
-  incognito-icon
-  vpn-icon
-  home_dir
-  screenshot
-  power_full
-  reboot_full
-  lock_full
-  logout_full
-  suspend_full
+  dashboard
 ]
 
 WINDOW_LIST={
@@ -36,12 +18,12 @@ WINDOW_LIST={
 def eww_windows
   result = { open: [], closed: [] }
 
-  `eww windows`.split.map do |window|
-    if window[0] == '*'
-      result[:open] << window[1..]
-    else
-      result[:closed] << window
-    end
+  # eww >= 0.2 renamed `eww windows`: open windows come from `active-windows`
+  # (formatted "name: name"), all defined windows from `list-windows`.
+  open = `eww active-windows`.lines.map { |l| l.split(":").first.to_s.strip }.reject(&:empty?)
+
+  `eww list-windows`.split.each do |window|
+    (open.include?(window) ? result[:open] : result[:closed]) << window
   end
 
   result
@@ -88,4 +70,21 @@ def window_list_arg
   end
 end
 
-eww_toggle(window_list_arg)
+group = ARGV[0]
+windows = window_list_arg
+
+case ARGV[1] || "toggle"
+when "toggle" then eww_toggle(windows)
+when "open"   then eww_open(windows)
+when "close"  then eww_close(*windows)
+else
+  STDERR.puts "Unknown action: #{ARGV[1]}"
+  STDERR.puts "Valid choices: toggle open close"
+  exit 1
+end
+
+# Reflect the new open-state so eww's `:run-while <group>-open` polls
+# (volume/brightness) only run while that group is visible.
+now_open = eww_windows[:open]
+is_open = windows.any? { |w| now_open.include?(w) }
+`eww update #{group}-open=#{is_open}`
