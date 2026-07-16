@@ -15,7 +15,7 @@ issues="$(gh issue list --assignee "@me" --state open \
         --json number,title,url 2>/dev/null || echo '[]')"
 hopper_items="$(cat "$HOPPER_FILE" 2>/dev/null || true)"
 
-claude -p "Produce a terse morning brief in markdown from this GitHub data.
+claude -p --model us.anthropic.claude-sonnet-5 "Produce a terse morning brief in markdown from this GitHub data.
 
 HARD REQUIREMENT: the very first line must be 'First action: <one concrete,
 physical, immediately startable action>' — the single highest-leverage thing

@@ -36,6 +36,14 @@ if [ -z "$KEY" ]; then
   exit 1
 fi
 
+# Bedrock auth for the claude -p prose step below. In a headless launchd run the
+# interactive OAuth login token is expired/unavailable, so pull the long-lived
+# Bedrock bearer token from the login keychain (same pattern as the key above).
+#   Key: security add-generic-password -U -s bedrock-api -a "$USER" -w
+export CLAUDE_CODE_USE_BEDROCK=1
+AWS_BEARER_TOKEN_BEDROCK="$(security find-generic-password -s bedrock-api -w 2>/dev/null || true)"
+export AWS_BEARER_TOKEN_BEDROCK
+
 # --- fetch: my assigned issues with comments + sub-issues ---------------------
 read -r -d '' QUERY <<'GQL' || true
 query {
@@ -123,7 +131,7 @@ if [ "$nnew" -eq 0 ] && [ "$nchg" -eq 0 ]; then
   notify "Linear standup: no changes" "No changes to your assigned issues since the last run."
 else
   if command -v claude >/dev/null 2>&1; then
-    claude -p "Write a terse morning standup in markdown titled '# Linear standup $(date +%F)'
+    claude -p --model us.anthropic.claude-haiku-4-5-20251001-v1:0 "Write a terse morning standup in markdown titled '# Linear standup $(date +%F)'
 from this diff of my assigned Linear issues since yesterday. Only include
 non-empty sections, each item one line with its identifier, title, and URL:
 1. Newly assigned to me
