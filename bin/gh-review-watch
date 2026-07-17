@@ -8,7 +8,7 @@
 # Scheduled via ~/Library/LaunchAgents/com.morning-feed.gh-review-watch.plist.
 set -uo pipefail
 
-SEEN="$HOME/.local/state/morning-feed/gh-seen.txt"
+SEEN="${FEED_DIR:-$HOME/.local/state/morning-feed}/gh-seen.txt"
 mkdir -p "$(dirname "$SEEN")"
 touch "$SEEN"
 

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 #
-# auto-claude machine setup — wires the tools in ~/bin (hopper, chore-pr,
-# rebase-pr, day-brief, ship-digest) to this machine:
+# auto-claude machine setup — wires the tools in ~/bin (hopper, nightly-
+# coordinator, rebase-pr, critique-pr, chore-pr, day-brief, ship-digest) to this
+# machine:
 #   - ~/.config/auto-claude/config.sh  (machine-local: work repo path, notify)
-#   - launchd agents (macOS): rebase-pr weekdays 02:00 (overnight, after West
-#     Coast devs stop pushing, so PRs are freshly rebased by morning),
-#     critique-pr weekdays 02:30 (right after rebase-pr, so review-requested PRs
-#     are critiqued on their freshly-rebased head), chore-pr weekdays 07:00,
-#     day-brief weekdays 07:45, ship-digest Friday 15:30
+#   - launchd agents (macOS): nightly-coordinator weekdays 02:00 (overnight, after
+#     West Coast devs stop pushing — runs rebase-pr → critique-pr → chore-pr
+#     sequentially under one caffeinate, so PRs are rebased, review-requested PRs
+#     critiqued, and the hopper drained into fresh PRs by morning), day-brief
+#     weekdays 07:45, ship-digest Friday 15:30
 #
-# rebase-pr's 02:00 slot needs a scheduled wake — see the pmset note at the
-# bottom of this script. critique-pr's 02:30 slot rides the same single wake.
+# The 02:00 slot needs a scheduled wake — see the pmset note at the bottom. The
+# whole overnight run rides that single wake (the coordinator holds one caffeinate).
 #
 # launchd, not cron: launchd runs missed jobs after sleep; cron silently
 # skips them. Jobs are scheduled for working hours because a closed-lid
@@ -25,16 +26,21 @@ CONF_DIR="$HOME/.config/auto-claude"
 AGENT_DIR="$HOME/Library/LaunchAgents"
 LOG_DIR="$CONF_DIR/logs"
 
-REBASE_HOUR=2;   REBASE_MIN=0    # overnight, after West Coast devs stop pushing
-CRITIQUE_HOUR=2; CRITIQUE_MIN=30 # right after rebase-pr, on freshly-rebased heads
-CHORE_HOUR=7;    CHORE_MIN=0
+NIGHTLY_HOUR=2;  NIGHTLY_MIN=0   # overnight; runs rebase-pr → critique-pr → chore-pr
 BRIEF_HOUR=7;    BRIEF_MIN=45
 DIGEST_HOUR=15;  DIGEST_MIN=30   # Friday
 
-PLIST_IDS="com.auto-claude.chore-pr com.auto-claude.rebase-pr com.auto-claude.critique-pr com.auto-claude.day-brief com.auto-claude.ship-digest"
+# Currently-scheduled jobs. The nightly-coordinator subsumes what used to be three
+# separate overnight jobs (rebase-pr 02:00, critique-pr 02:30, chore-pr 07:00) —
+# those scripts stay in ~/bin for manual use but are no longer scheduled directly.
+PLIST_IDS="com.auto-claude.nightly com.auto-claude.day-brief com.auto-claude.ship-digest"
+
+# Retired plists: booted out + removed on install so switching to the coordinator
+# leaves no stale schedules behind.
+RETIRED_PLIST_IDS="com.auto-claude.chore-pr com.auto-claude.rebase-pr com.auto-claude.critique-pr"
 
 if [ "${1:-}" = "--uninstall" ]; then
-  for id in $PLIST_IDS; do
+  for id in $PLIST_IDS $RETIRED_PLIST_IDS; do
     plist="$AGENT_DIR/$id.plist"
     launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
     rm -f "$plist"
@@ -73,6 +79,17 @@ HOPPER_FILE="\$CONF_DIR/hopper.txt"
 BRIEF_DIR="\$CONF_DIR/briefs"
 LOG_DIR="\$CONF_DIR/logs"
 WORKTREE_DIR="\$CONF_DIR/worktrees"
+
+# Notification-hub spool location (single source of truth; feed/morning-feed/
+# gh-review-watch all read this instead of hardcoding the path).
+FEED_DIR="\$HOME/.local/state/morning-feed"
+FEED="\$FEED_DIR/feed.ndjson"
+
+# Model aliases, resolved centrally so jobs don't drift between bare aliases and
+# pinned Bedrock ids. Bare aliases resolve under CLAUDE_CODE_USE_BEDROCK.
+AC_MODEL_OPUS="\${AC_MODEL_OPUS:-opus}"
+AC_MODEL_SONNET="\${AC_MODEL_SONNET:-sonnet}"
+AC_MODEL_HAIKU="\${AC_MODEL_HAIKU:-haiku}"
 
 # Bedrock auth for headless launchd runs. The interactive OAuth login token
 # (used when these vars are unset) expires overnight and is unavailable to GUI
@@ -116,9 +133,11 @@ weekday_intervals() { # hour minute
   done
 }
 
-write_plist() { # id intervals-xml
+write_plist() { # id intervals-xml [tool-name]
   local id="$1" intervals="$2" plist="$AGENT_DIR/$1.plist"
-  local tool="${id#com.auto-claude.}"
+  # Tool defaults to the id suffix; pass a 3rd arg when the ~/bin script name
+  # differs from the launchd label (e.g. label .nightly → script nightly-coordinator).
+  local tool="${3:-${id#com.auto-claude.}}"
   cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -148,9 +167,19 @@ PLIST
 }
 
 mkdir -p "$AGENT_DIR"
-write_plist com.auto-claude.chore-pr  "$(weekday_intervals $CHORE_HOUR $CHORE_MIN)"
-write_plist com.auto-claude.rebase-pr "$(weekday_intervals $REBASE_HOUR $REBASE_MIN)"
-write_plist com.auto-claude.critique-pr "$(weekday_intervals $CRITIQUE_HOUR $CRITIQUE_MIN)"
+
+# Boot out + remove any retired per-job overnight plists (superseded by the
+# nightly-coordinator) so re-running setup cleanly migrates an old install.
+for id in $RETIRED_PLIST_IDS; do
+  plist="$AGENT_DIR/$id.plist"
+  if [ -e "$plist" ]; then
+    launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+    rm -f "$plist"
+    echo "retired: $id"
+  fi
+done
+
+write_plist com.auto-claude.nightly   "$(weekday_intervals $NIGHTLY_HOUR $NIGHTLY_MIN)" nightly-coordinator
 write_plist com.auto-claude.day-brief "$(weekday_intervals $BRIEF_HOUR $BRIEF_MIN)"
 write_plist com.auto-claude.ship-digest \
   "$(printf '    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>%s</integer><key>Minute</key><integer>%s</integer></dict>' "$DIGEST_HOUR" "$DIGEST_MIN")"
@@ -159,14 +188,14 @@ cat <<DONE
 
 auto-claude wired up. Seed the hopper, then dry-run before trusting the schedule:
   hopper add "bump terraform google provider one minor version"
-  day-brief && chore-pr && ship-digest
-  rebase-pr --dry-run   # inspect the stack graph + rebase plan before a real run
+  nightly-coordinator --dry-run   # show the overnight stage plan (no jobs run)
+  rebase-pr --dry-run             # inspect the stack graph + rebase plan
 
 IMPORTANT — schedule the overnight wake (needs sudo; macOS allows only ONE
-repeating wake, so this single 01:58 wake serves the 02:00 rebase-pr job):
+repeating wake, so this single 01:58 wake serves the 02:00 nightly-coordinator):
   sudo pmset repeat wake MTWRF 01:58:00        # (cancel: sudo pmset repeat cancel)
 Reliable on AC power; a lid-closed MacBook on battery may deep-sleep past it.
-This replaces any earlier morning wake — chore-pr/day-brief/ship-digest then
-run on the next wake (when you open the laptop); launchd runs missed jobs, so
-they are not skipped, just deferred to that wake.
+The coordinator holds one caffeinate for the whole run, so all three overnight
+stages ride this single wake; day-brief/ship-digest run on the next wake (when you
+open the laptop); launchd runs missed jobs, so they are deferred, not skipped.
 DONE

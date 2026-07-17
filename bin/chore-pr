@@ -29,20 +29,15 @@
 # the backstop under dontAsk. Never --dangerously-skip-permissions: work policy.
 set -euo pipefail
 
-# Hold the machine awake for the whole run. The launchd schedule (or a pmset
-# scheduled wake) may only guarantee a brief wake window, but the Claude step
-# below runs for minutes — re-exec under `caffeinate -i` so idle sleep can't
-# interrupt a chore mid-flight. caffeinate releases the moment we exit, so the
-# laptop is free to sleep again. Guarded to avoid re-exec'ing forever.
-#   Wake the machine before the 06:00 launchd fire with a repeating schedule:
-#     sudo pmset repeat wake MTWRF 05:58:00   (cancel: sudo pmset repeat cancel)
-#   NOTE: reliable on AC power; a lid-closed MacBook on battery may deep-sleep
-#   past the scheduled wake regardless. A locked (but awake) screen is fine —
-#   launchd user agents run while locked.
-if [ -z "${CHORE_PR_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
-  export CHORE_PR_CAFFEINATED=1
-  exec caffeinate -i "$0" "$@"
-fi
+# Shared harness (permission posture + caffeinate coordination).
+. "$(dirname "$0")/lib/auto-claude-job.sh"
+
+# Hold the machine awake for the whole run — the Claude step runs for minutes and
+# a brief wake window isn't enough. No-op if the nightly-coordinator already
+# holds one caffeinate for the night. (Wake is armed via `sudo pmset repeat wake
+# MTWRF 01:58:00`; reliable on AC, a lid-closed MacBook on battery may deep-sleep
+# past it. A locked-but-awake screen is fine — launchd user agents run locked.)
+ac_caffeinate_guard chore-pr "$@"
 
 AUTO_CLAUDE_FEED_SOURCE=chore-pr
 . "$HOME/.config/auto-claude/config.sh"
@@ -54,15 +49,10 @@ if [ -z "$item" ]; then
   exit 0
 fi
 
-# ── Permission posture (headless-safe) ───────────────────────────────────────
-# --permission-mode dontAsk executes ONLY tools matching the allow-list and never
-# prompts — the correct posture for an unattended -p run (verified on claude
-# 2.1.212: `auto` DENIES Edit/Write with no TTY). The allow-list must be ONE
-# comma-joined --allowedTools argument. The ~/.claude/settings.json deny-list
-# still composes under dontAsk (git push --force* etc. remain refused). Never
-# --dangerously-skip-permissions / bypassPermissions: work policy.
-base_flags=(--permission-mode dontAsk --allowedTools
-  "Read,Edit,Write,Bash(git:*),Bash(bun:*),Bash(bun-ptr:*),Bash(npm:*),Bash(npx:*),Bash(pnpm:*),Bash(yarn:*),Bash(cargo:*),Bash(mkdir:*),Bash(date:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*)")
+# Permission posture: the shared headless-safe dontAsk + allow-list (see
+# lib/auto-claude-job.sh). chore-pr additionally needs the JS package managers +
+# cargo for its implement stage across ts/rust chores.
+ac_perm_flags "Bash(npm:*),Bash(npx:*),Bash(pnpm:*),Bash(yarn:*),Bash(cargo:*)"
 
 # ── Classify: untagged items get a category before we spend a worktree ───────
 # One cheap haiku call, auto mode; outputs a single category word. Anything

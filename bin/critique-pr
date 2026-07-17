@@ -33,11 +33,12 @@
 #   critique-pr --pr N       # limit to one PR (dry/manual verification)
 set -euo pipefail
 
-# Hold the machine awake for the whole run (see chore-pr for the pmset note).
-if [ -z "${CRITIQUE_PR_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
-  export CRITIQUE_PR_CAFFEINATED=1
-  exec caffeinate -i "$0" "$@"
-fi
+# Shared harness (permission posture + caffeinate coordination).
+. "$(dirname "$0")/lib/auto-claude-job.sh"
+
+# Hold the machine awake for the whole run (no-op under the nightly-coordinator's
+# caffeinate). See chore-pr for the pmset note.
+ac_caffeinate_guard critique-pr "$@"
 
 AUTO_CLAUDE_FEED_SOURCE=critique-pr
 . "$HOME/.config/auto-claude/config.sh"
@@ -52,12 +53,9 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-# --permission-mode dontAsk pre-approves exactly the listed tools and never
-# prompts (auto DENIES tool calls headlessly — verified claude 2.1.212). The
-# critique skill is read-mostly but runs its bun helpers + gh/git to gather
-# context; the deny-list still composes as the backstop. One comma-joined arg.
-base_flags=(--permission-mode dontAsk --allowedTools
-  "Read,Edit,Write,Bash(git:*),Bash(gh:*),Bash(bun:*),Bash(bun-ptr:*),Bash(mkdir:*),Bash(date:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*)")
+# Permission posture: the shared headless-safe dontAsk + allow-list (see
+# lib/auto-claude-job.sh). critique additionally needs gh to gather PR context.
+ac_perm_flags "Bash(gh:*)"
 
 REPO="hipphealth/hipp"
 cd "$WORK_REPO"

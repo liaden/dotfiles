@@ -45,11 +45,12 @@
 #                          # worktrees, no Claude, no push (safe, read-only)
 set -euo pipefail
 
-# Hold the machine awake for the whole run (see chore-pr for the pmset note).
-if [ -z "${REBASE_PR_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
-  export REBASE_PR_CAFFEINATED=1
-  exec caffeinate -i "$0" "$@"
-fi
+# Shared harness (permission posture + caffeinate coordination).
+. "$(dirname "$0")/lib/auto-claude-job.sh"
+
+# Hold the machine awake for the whole run (no-op if the nightly-coordinator
+# already holds one caffeinate for the night). See chore-pr for the pmset note.
+ac_caffeinate_guard rebase-pr "$@"
 
 AUTO_CLAUDE_FEED_SOURCE=rebase-pr
 . "$HOME/.config/auto-claude/config.sh"
@@ -63,17 +64,9 @@ for arg in "$@"; do
   esac
 done
 
-# ── Permission posture (headless-safe) ───────────────────────────────────────
-# --permission-mode dontAsk executes ONLY tools matching the allow-list and never
-# prompts — the correct posture for an unattended -p run (verified on claude
-# 2.1.212: `auto` DENIES Edit/Write with no TTY, which blocked ~10 PRs/night). The
-# allow-list must be ONE comma-joined --allowedTools argument (separate args are
-# not parsed as an allow-list). The ~/.claude/settings.json deny-list still
-# composes under dontAsk (verified: `git push --force*` is refused), so the
-# force-with-lease push stays in the bash tail after Claude exits. Never
-# --dangerously-skip-permissions / bypassPermissions: work policy.
-base_flags=(--permission-mode dontAsk --allowedTools
-  "Read,Edit,Write,Bash(git:*),Bash(bun:*),Bash(bun-ptr:*),Bash(cargo:*),Bash(mkdir:*),Bash(date:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*)")
+# Permission posture: the shared headless-safe dontAsk + allow-list (see
+# lib/auto-claude-job.sh). rebase-pr additionally needs cargo for Rust gates.
+ac_perm_flags "Bash(cargo:*)"
 
 cd "$WORK_REPO"
 

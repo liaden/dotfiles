@@ -15,7 +15,7 @@
 # only, compact layout for a ~38-col pane.
 set -euo pipefail
 
-FEED="$HOME/.local/state/morning-feed/feed.ndjson"
+FEED="${FEED:-$HOME/.local/state/morning-feed/feed.ndjson}"
 # fswatch lives at /opt/homebrew/bin on macOS, /usr/bin or /usr/local/bin on
 # Linux — resolve off PATH, falling back to the Homebrew path if PATH is bare
 # (e.g. a minimal launchd/systemd env).

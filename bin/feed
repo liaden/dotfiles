@@ -28,8 +28,10 @@
 # reclaimed so a dead holder can't wedge the feed forever.
 set -euo pipefail
 
-FEED_DIR="$HOME/.local/state/morning-feed"
-FEED="$FEED_DIR/feed.ndjson"
+# FEED_DIR may be pre-set by config.sh (the single source of truth); default
+# preserved so `feed` stays dependency-free for bare-env / non-WORK_REPO callers.
+FEED_DIR="${FEED_DIR:-$HOME/.local/state/morning-feed}"
+FEED="${FEED:-$FEED_DIR/feed.ndjson}"
 LOCK="$FEED_DIR/.lock"
 LOCK_TIMEOUT=30   # seconds before a held lock is treated as stale
 
