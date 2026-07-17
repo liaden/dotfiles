@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+# critique-pr — nightly producer: run the hipp `critique` skill against every PR
+# requesting my review (or re-review) and drop one actionable item per PR into
+# the notification-hub feed. The interactive consumer (`review-pr`, launched from
+# the feed picker) later walks me through the proposed comments and posts them.
+#
+# What it does, per run:
+#   1. Get the review set from `pr-rereviews -j` (open, non-draft PRs requesting
+#      my review, each with a deterministic diff range + mode).
+#   2. In a disposable detached worktree (isolates the gitignored .llm/critique
+#      writes and the `git fetch <sha>` a re-review range needs), run one headless
+#      `claude -p` per PR invoking the `critique` skill in `--fast` mode. The
+#      skill's walkthrough (Step 4.5) and post (Step 5) self-disable with no TTY,
+#      so this produces silently — a TTY `review-pr` session drives the post.
+#   3. For a re-review, the prompt scopes findings to the diff range (new code
+#      since my last review); the skill still gathers full context, the range
+#      just says which findings matter.
+#   4. Copy the skill's final.md + comments.json out of the worktree into
+#      $LOG_DIR/critique/pr-N/ so they outlive the worktree and the consumer can
+#      read them. Count findings; emit a feed item (with a `meta` object) for any
+#      PR with ≥1 finding, a low-key note for zero.
+#
+# Permission posture mirrors rebase-pr/chore-pr: --permission-mode dontAsk with an
+# explicit --allowedTools list (auto DENIES tool calls headlessly). The global
+# deny-list is the backstop. Never --dangerously-skip-permissions: work policy.
+#
+# Scheduled by ~/setup/auto-claude as a launchd job at 02:30 weekdays — after
+# rebase-pr (02:00) so PRs are freshly rebased before critique. Shares the single
+# 01:58 pmset wake with rebase-pr.
+#
+# Usage:
+#   critique-pr              # real run: critique every review-requested PR
+#   critique-pr --pr N       # limit to one PR (dry/manual verification)
+set -euo pipefail
+
+# Hold the machine awake for the whole run (see chore-pr for the pmset note).
+if [ -z "${CRITIQUE_PR_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
+  export CRITIQUE_PR_CAFFEINATED=1
+  exec caffeinate -i "$0" "$@"
+fi
+
+AUTO_CLAUDE_FEED_SOURCE=critique-pr
+. "$HOME/.config/auto-claude/config.sh"
+
+ONLY_PR=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --pr) shift; ONLY_PR="${1:-}" ;;
+    --help|-h) sed -n '43,46p' "$0" | sed 's/^# \?//'; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+# --permission-mode dontAsk pre-approves exactly the listed tools and never
+# prompts (auto DENIES tool calls headlessly — verified claude 2.1.212). The
+# critique skill is read-mostly but runs its bun helpers + gh/git to gather
+# context; the deny-list still composes as the backstop. One comma-joined arg.
+base_flags=(--permission-mode dontAsk --allowedTools
+  "Read,Edit,Write,Bash(git:*),Bash(gh:*),Bash(bun:*),Bash(bun-ptr:*),Bash(mkdir:*),Bash(date:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*)")
+
+REPO="hipphealth/hipp"
+cd "$WORK_REPO"
+git fetch --quiet origin "$BASE_BRANCH" || true
+
+# ── Review set (reuse pr-rereviews; do not re-derive) ────────────────────────
+set_json="$(pr-rereviews -r "$REPO" -j)"
+if [ -n "$ONLY_PR" ]; then
+  set_json="$(printf '%s' "$set_json" | jq -c --argjson n "$ONLY_PR" '[.[] | select(.number == $n)]')"
+fi
+
+count="$(printf '%s' "$set_json" | jq 'length')"
+if [ "$count" -eq 0 ]; then
+  echo "$(date '+%F %T') no PRs requesting review; nothing to do"
+  notify-feed critique-pr "No PRs to review" "No open non-draft PRs are requesting your review."
+  exit 0
+fi
+echo "=== $(date '+%F %T') critique-pr sweep: $count PR(s) requesting review"
+
+# ── Disposable detached worktree (isolates .llm/critique + re-review fetches) ─
+wt="$WORKTREE_DIR/critique-pr"
+cleanup() { cd "$WORK_REPO"; git worktree remove --force "$wt" 2>/dev/null || true; }
+trap cleanup EXIT
+mkdir -p "$WORKTREE_DIR"
+git worktree remove --force "$wt" 2>/dev/null || true
+git worktree add --quiet --detach "$wt" "origin/$BASE_BRANCH"
+
+reviewed=(); clean=(); errored=()
+
+critique_one() { # number title mode last_sha head_sha diff_range
+  local num="$1" title="$2" mode="$3" last_sha="$4" head_sha="$5" diff_range="$6"
+  echo "--- #$num ($mode) $title ---"
+  notify-feed critique-pr "critique-pr: reviewing #$num" "Running critique on PR #$num ($mode)."
+
+  # Re-review scoping appended to the prompt for rereview/full-forcepush modes.
+  local scope=""
+  case "$mode" in
+    rereview)
+      scope="
+
+This is a **re-review** — only surface findings on code changed in \`$diff_range\` (new since my last review at \`$last_sha\`); ignore code that has not changed since then."
+      ;;
+    full-forcepush)
+      scope="
+
+This is a **re-review**, but the branch was force-pushed and my last-review commit (\`$last_sha\`) is no longer in the head's history, so review the full PR diff (\`$diff_range\`)."
+      ;;
+  esac
+
+  local prompt="Invoke the \`critique\` skill (via the Skill tool) on PR #$num. Pass it exactly these arguments: \"$num --fast\". This is a headless run: there is no TTY, so the skill's interactive walkthrough (Step 4.5) and the post step (Step 5) self-disable — just produce the session folder with final.md and comments.json and report the absolute path to the session folder as your final message.$scope"
+
+  set +e
+  local out rc
+  out="$( cd "$wt" && claude -p "$prompt" "${base_flags[@]}" --model opus 2>&1 )"
+  rc=$?
+  set -e
+  printf '%s\n' "$out"   # surface to the run log
+
+  if [ "$rc" -ne 0 ]; then
+    errored+=("#$num")
+    notify "critique-pr errored on #$num $title"
+    return 0
+  fi
+
+  # Resolve the session dir. Folder names are exactly {date}-pr-{number}
+  # (SKILL.md), so match `-pr-$num` anchored at the END of the path component —
+  # NEVER a substring. A bare `*pr-42*` also matches `pr-4218`/`pr-421`, which in
+  # this one-shared-worktree sweep would copy the WRONG PR's comments.json and
+  # later post its findings on the wrong PR.
+  local session="" printed base
+  # Prefer a path the skill printed; strip a trailing /<file> to get the folder,
+  # then accept it only if the basename ends in exactly -pr-$num.
+  printed="$(printf '%s\n' "$out" | grep -oE '(/[^[:space:]]+)?\.llm/critique/[^[:space:]]+' | tail -1)"
+  printed="${printed%/}"
+  case "$printed" in
+    */comments.json|*/final.md|*/context.json|*/enriched-findings.json|*/clusters.json) printed="${printed%/*}" ;;
+  esac
+  if [ -n "$printed" ]; then
+    base="$(basename "$printed")"
+    case "$base" in *-pr-"$num") session="$printed" ;; esac
+  fi
+  # Fallback: newest folder whose name ends in -pr-$num (exact-anchored glob).
+  if [ -z "$session" ] || { [ ! -d "$wt/$session" ] && [ ! -d "$session" ]; }; then
+    session="$( cd "$wt" && ls -dt .llm/critique/*-pr-"$num" 2>/dev/null | head -1 || true )"
+  fi
+  # Normalize to an absolute path inside the worktree.
+  local abs_session=""
+  if [ -n "$session" ]; then
+    if [ -d "$session" ]; then abs_session="$session"; elif [ -d "$wt/$session" ]; then abs_session="$wt/$session"; fi
+  fi
+  if [ -z "$abs_session" ] || [ ! -f "$abs_session/comments.json" ]; then
+    errored+=("#$num")
+    notify "critique-pr: no comments.json for #$num $title (skill produced nothing usable)"
+    return 0
+  fi
+
+  # Copy artifacts out of the disposable worktree so they survive cleanup and the
+  # interactive consumer can read them.
+  local dest="$LOG_DIR/critique/pr-$num"
+  mkdir -p "$dest"
+  cp "$abs_session/comments.json" "$dest/comments.json"
+  [ -f "$abs_session/final.md" ] && cp "$abs_session/final.md" "$dest/final.md"
+
+  # Count inline findings.
+  local findings
+  findings="$(jq '.inline | length' "$dest/comments.json" 2>/dev/null || echo 0)"
+
+  if [ "$findings" -eq 0 ]; then
+    clean+=("#$num")
+    notify-feed critique-pr "PR #$num · no blocking findings" "Critique of PR #$num ($mode) surfaced no inline findings."
+    return 0
+  fi
+
+  # Body: the authored "Must address" list from the critique (falls back to the
+  # summary body if there are none).
+  local body
+  body="$(jq -r '
+    if (.summary.mustAddress | length) > 0
+    then (.summary.mustAddress | map("• " + .) | join("\n"))
+    else (.summary.body // "") end' "$dest/comments.json" 2>/dev/null || true)"
+
+  local mode_label; case "$mode" in
+    rereview|full-forcepush) mode_label="re-review" ;;
+    *) mode_label="review" ;;
+  esac
+  local plural="findings"; [ "$findings" -eq 1 ] && plural="finding"
+  local ftitle="PR #$num · $findings $plural ($mode_label)"
+
+  # meta carries everything the consumer needs to drive the walkthrough + clear.
+  local meta
+  meta="$(jq -cn \
+    --argjson pr "$num" --arg repo "$REPO" --arg mode "$mode" \
+    --argjson findings "$findings" --arg log_dir "$dest" \
+    --arg comments_json "$dest/comments.json" --arg final_md "$dest/final.md" \
+    --arg head_sha "$head_sha" \
+    '{pr:$pr, repo:$repo, mode:$mode, findings:$findings, log_dir:$log_dir,
+      comments_json:$comments_json, final_md:$final_md, head_sha:$head_sha}')"
+
+  # Supersede any prior critique item for this PR before adding the fresh one, so
+  # a PR open across several nights shows ONE item, not an accumulating pile — and
+  # so no stale item survives pointing at the (now overwritten) $dest artifacts.
+  # Wide window: a prior item may be older than the default render window.
+  local old_id
+  while IFS= read -r old_id; do
+    [ -n "$old_id" ] && feed remove "$old_id"
+  done < <(feed query --source critique-pr --has-meta pr --since-days 90 --json \
+    | jq -r --argjson n "$num" '.[] | select(.meta.pr == $n) | .id')
+
+  feed add critique-pr "$ftitle" "$body" --meta "$meta" >/dev/null
+  reviewed+=("#$num ($findings)")
+}
+
+while IFS=$'\t' read -r num title mode last_sha head_sha diff_range; do
+  [ -z "$num" ] && continue
+  critique_one "$num" "$title" "$mode" "$last_sha" "$head_sha" "$diff_range"
+done < <(printf '%s' "$set_json" | jq -r '.[] | [.number, .title, .mode, .last_sha, .head_sha, .diff_range] | @tsv')
+
+# ── Summary ──────────────────────────────────────────────────────────────────
+summary="reviewed: ${#reviewed[@]} | clean: ${#clean[@]} | errored: ${#errored[@]}"
+echo "=== $(date '+%F %T') critique-pr done — $summary"
+[ "${#reviewed[@]}" -gt 0 ] && printf '  reviewed: %s\n' "${reviewed[*]}"
+[ "${#clean[@]}" -gt 0 ]    && printf '  clean:    %s\n' "${clean[*]}"
+[ "${#errored[@]}" -gt 0 ]  && printf '  errored:  %s\n' "${errored[*]}"
+
+body="Reviewed ${#reviewed[@]} (with findings), ${#clean[@]} clean, ${#errored[@]} errored."
+[ "${#reviewed[@]}" -gt 0 ] && body="$body"$'\n'"Findings on: ${reviewed[*]}"
+[ "${#errored[@]}" -gt 0 ]  && body="$body"$'\n'"Errored: ${errored[*]}"
+notify-feed critique-pr "critique-pr: $summary" "$body"
+
+# Non-zero exit if any PR errored, so a launchd failure surfaces.
+[ "${#errored[@]}" -eq 0 ]

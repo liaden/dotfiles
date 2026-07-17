@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+#
+# pr-db-review - List open PRs that need review and touch the DB/persistence layer.
+#
+# Finds open (non-draft) PRs that are:
+#   - not approved (overall reviewDecision != APPROVED)
+#   - not yet reviewed by you
+#   - not authored by you
+#   - opened within a recent window (default: last 21 days)
+#   - touching the persistence layer. Detects both stacks:
+#       Prisma: schema.prisma, prisma migrations, src/libs/db/
+#       Rails:  db/schema.rb or db/structure.sql, db/migrate/*.rb, app/models/*.rb
+#
+# Requires: gh (authenticated), jq
+#
+# Usage:
+#   pr-db-review [-d DAYS] [-u LOGIN] [-a] [-j] [-h]
+#
+#   -d DAYS   Lookback window in days (default: 21)
+#   -u LOGIN  Your GitHub login (default: auto-detected via `gh api user`)
+#   -a        Include PRs authored by "app/*" bots (e.g. app/claude)
+#   -j        Emit raw JSON instead of the formatted table
+#   -h        Show this help
+
+set -euo pipefail
+
+DAYS=21
+ME=""
+INCLUDE_BOTS=0
+AS_JSON=0
+
+# Print the leading comment block (skips the shebang, stops at the first
+# non-comment line) as help text.
+usage() {
+  awk 'NR==1 {next} /^#/ {sub(/^# ?/, ""); print; next} {exit}' "$0"
+  exit "${1:-0}"
+}
+
+while getopts ":d:u:ajh" opt; do
+  case "$opt" in
+    d) DAYS="$OPTARG" ;;
+    u) ME="$OPTARG" ;;
+    a) INCLUDE_BOTS=1 ;;
+    j) AS_JSON=1 ;;
+    h) usage 0 ;;
+    :) echo "Option -$OPTARG requires an argument." >&2; usage 1 ;;
+    \?) echo "Unknown option: -$OPTARG" >&2; usage 1 ;;
+  esac
+done
+
+command -v gh >/dev/null || { echo "error: gh not found" >&2; exit 1; }
+command -v jq >/dev/null || { echo "error: jq not found" >&2; exit 1; }
+
+if [[ -z "$ME" ]]; then
+  ME="$(gh api user --jq '.login')"
+fi
+
+# Compute the lookback date (macOS/BSD and GNU date compatible).
+if date -v-1d >/dev/null 2>&1; then
+  SINCE="$(date -v-"${DAYS}"d +%F)"   # BSD/macOS
+else
+  SINCE="$(date -d "-${DAYS} days" +%F)"  # GNU
+fi
+
+# Pull candidate PRs: open, created within window. Filter the rest with jq.
+prs_json="$(
+  gh pr list --state open --limit 300 \
+    --search "created:>=${SINCE}" \
+    --json number,title,author,createdAt,reviewDecision,reviews,url,isDraft
+)"
+
+# Apply reviewer/approval/author filters. Bots (app/*) optionally excluded.
+filtered="$(
+  printf '%s' "$prs_json" | jq \
+    --arg me "$ME" \
+    --argjson bots "$INCLUDE_BOTS" '
+    map(select(.isDraft == false))
+    | map(select(.reviewDecision != "APPROVED"))
+    | map(select([.reviews[]?.author.login] | index($me) | not))
+    | map(select(.author.login != $me))
+    | (if $bots == 1 then . else map(select(.author.login | startswith("app/") | not)) end)
+    | sort_by(.createdAt)
+  '
+)"
+
+numbers="$(printf '%s' "$filtered" | jq -r '.[].number')"
+
+# For each candidate, count persistence-layer file touches. A PR qualifies if it
+# touches a schema, a migration, or a model/db-layer file. Patterns cover both
+# Prisma (schema.prisma, prisma migrations, src/libs/db/) and Rails (db/schema.rb
+# or db/structure.sql, db/migrate/*.rb, app/models/*.rb).
+SCHEMA_RE='(^|/)schema\.prisma$|(^|/)db/schema\.rb$|(^|/)db/structure\.sql$'
+MIGRATION_RE='migrations/.*migration\.sql$|(^|/)db/migrate/.*\.rb$'
+MODEL_RE='src/libs/db/|(^|/)app/models/.*\.rb$'
+
+db_rows=""  # number<TAB>schema<TAB>migration<TAB>model
+while IFS= read -r n; do
+  [[ -z "$n" ]] && continue
+  files="$(gh pr view "$n" --json files --jq '.files[].path')"
+  schema=$(printf '%s\n' "$files" | grep -cE "$SCHEMA_RE" || true)
+  migr=$(printf '%s\n'   "$files" | grep -cE "$MIGRATION_RE" || true)
+  model=$(printf '%s\n'  "$files" | grep -cE "$MODEL_RE" || true)
+  db_rows+="${n}	${schema}	${migr}	${model}"$'\n'
+done <<< "$numbers"
+
+# Merge the DB counts back into the PR metadata; keep only DB-touching PRs.
+merged="$(
+  printf '%s' "$filtered" | jq \
+    --rawfile dbraw <(printf '%s' "$db_rows") '
+    ($dbraw | rtrimstr("\n") | split("\n")
+      | map(select(length > 0) | split("\t")
+        | {number: (.[0]|tonumber), schema: (.[1]|tonumber),
+           migration: (.[2]|tonumber), model: (.[3]|tonumber)})
+      | INDEX(.number|tostring)) as $db
+    | map(. + {db: $db[.number|tostring]})
+    | map(select(.db.schema > 0 or .db.migration > 0 or .db.model > 0))
+    | map({
+        number, title, url,
+        state: (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
+        opened: (.createdAt[0:10]),
+        author: .author.login,
+        schema: .db.schema, migration: .db.migration, model: .db.model
+      })
+  '
+)"
+
+if [[ "$AS_JSON" == "1" ]]; then
+  printf '%s\n' "$merged"
+  exit 0
+fi
+
+count="$(printf '%s' "$merged" | jq 'length')"
+echo "Open, unapproved, unreviewed-by-${ME}, DB-touching PRs (opened since ${SINCE}): ${count}"
+echo
+
+printf '%s' "$merged" | jq -r '
+  .[] | "#\(.number)\t\(.opened)\t\(.state)\t\(.author)\t\(.title)\t[schema:\(.schema) mig:\(.migration) model:\(.model)]"
+' | column -t -s $'\t'

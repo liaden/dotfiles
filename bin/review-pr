@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# review-pr — interactive consumer for critique-pr feed items. Opens a TTY claude
+# session that walks me through the proposed critique comments and posts them,
+# then clears the feed item and closes the window when posting is done.
+#
+#   review-pr --pick     open the picker (a numbered chooser of pending critique
+#                        items), then act on the selection. Bound to a tmux key.
+#   review-pr <N>        act on PR #N directly (its critique must already be in
+#                        the feed, produced by the nightly critique-pr job).
+#
+# Flow for a selected PR:
+#   1. Resolve the feed item's meta (PR number, comments.json path under
+#      $LOG_DIR/critique/pr-N/, and the feed record id used to clear it).
+#   2. Open a NEW tmux window running `claude` with a walkthrough prompt: for each
+#      finding, confirm/edit/skip, then post the approved set as one review via
+#      scripts/critique/post-review.ts. The session runs in the hipp checkout so
+#      post-review.ts resolves. As its final step it touches a .posted sentinel.
+#   3. A background monitor waits for that sentinel, then clears the feed item
+#      (`feed remove <id>` — the CLI owns the locked rewrite) and closes the
+#      window. If the window is closed without posting, the item is left in place.
+#
+# Requires: tmux (must be run inside a tmux session), the auto-claude config, and
+# the artifacts the nightly critique-pr job copied into $LOG_DIR/critique/pr-N/.
+set -euo pipefail
+
+. "$HOME/.config/auto-claude/config.sh"
+REPO="hipphealth/hipp"
+
+command -v tmux >/dev/null || { echo "review-pr: tmux not found" >&2; exit 1; }
+[ -n "${TMUX:-}" ] || { echo "review-pr: must be run inside tmux" >&2; exit 1; }
+
+# A pending critique's lifetime is "until I action it", not the feed's default
+# 3-day render window — a Friday-night critique must still be pickable Monday. So
+# the consumer queries a wide window; anything not yet cleared is still pending.
+PENDING_WINDOW_DAYS=90
+
+# ── Resolve the feed item for a PR: newest critique-pr record with meta.pr==N ──
+# Echoes: id<TAB>comments_json<TAB>final_md   (empty line if none found)
+resolve_item() { # pr-number
+  feed query --source critique-pr --has-meta pr --since-days "$PENDING_WINDOW_DAYS" --json \
+    | jq -r --argjson n "$1" '
+        map(select(.meta.pr == $n)) | .[0]
+        | if . == null then empty
+          else [.id, (.meta.comments_json // ""), (.meta.final_md // "")] | @tsv end'
+}
+
+# ── Picker: numbered chooser over pending critique items ─────────────────────
+# fzf is not installed here, so use a plain-bash numbered menu (the pr-db-review
+# floor). Prints the chosen PR number on stdout, or nothing on cancel.
+pick_pr() {
+  local items count
+  items="$(feed query --source critique-pr --has-meta pr --since-days "$PENDING_WINDOW_DAYS" --json)"
+  count="$(printf '%s' "$items" | jq 'length')"
+  if [ "$count" -eq 0 ]; then
+    echo "No pending critiques in the feed." >&2
+    return 1
+  fi
+
+  echo "Pending PR critiques:" >&2
+  printf '%s' "$items" | jq -r 'to_entries[] | "\(.key+1)) \(.value.title)"' >&2
+  echo >&2
+  local choice
+  read -r -p "Pick a number (empty to cancel): " choice >&2 || return 1
+  [ -z "$choice" ] && return 1
+  case "$choice" in
+    ''|*[!0-9]*) echo "not a number" >&2; return 1 ;;
+  esac
+  if [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then
+    echo "out of range" >&2; return 1
+  fi
+  printf '%s' "$items" | jq -r --argjson i "$((choice - 1))" '.[$i].meta.pr'
+}
+
+# ── Launch the claude walkthrough window + background clear-on-done monitor ───
+launch() { # pr-number id comments_json final_md
+  local num="$1" id="$2" comments_json="$3" final_md="$4"
+  local sentinel="$LOG_DIR/critique/pr-$num/.posted"
+  rm -f "$sentinel"
+
+  local prompt="Walk me through the proposed critique comments for PR #$num in $REPO.
+
+The proposed inline comments are in \`$comments_json\`; the full critique write-up is in \`$final_md\`. Read both first.
+
+For each finding, show me the file:line, the diff context, and the proposed comment body, and let me confirm / edit / skip it (use the AskUserQuestion tool). This is a TTY session, so the \`critique\` skill's interactive walkthrough (Step 4.5) is available — you may invoke the skill's walkthrough over \`$comments_json\` if that is cleaner.
+
+After I have confirmed the set, rewrite \`$comments_json\` to the approved inline findings (drop skipped ones, apply edited bodies, leave all other fields untouched), then post them as a single REQUEST_CHANGES review by running, from the repo root:
+
+    GITHUB_REPOSITORY=$REPO PR_NUMBER=$num COMMENTS_JSON_PATH=$comments_json GITHUB_TOKEN=\$(gh auth token) bun scripts/critique/post-review.ts
+
+Only after post-review.ts reports success, as your very last step run:
+
+    touch $sentinel
+
+That sentinel tells the harness the review was posted; it will then clear this item from the feed and close this window. If I decide NOT to post (skip everything or cancel), do NOT touch the sentinel — just tell me and stop."
+
+  # New window running the interactive claude session in the hipp checkout so
+  # post-review.ts resolves. Capture the pane id to close it when done.
+  local pane
+  pane="$(tmux new-window -c "$WORK_REPO" -n "review-$num" -P -F '#{pane_id}' \
+    "claude $(printf '%q' "$prompt")")"
+
+  # Background monitor: wait for the sentinel, then clear the feed item and close
+  # the window. Bail out if the window is closed before posting (item left in
+  # place). Detached so the caller (and any popup) can return immediately.
+  (
+    while true; do
+      if [ -f "$sentinel" ]; then
+        feed remove "$id"
+        tmux kill-pane -t "$pane" 2>/dev/null || true
+        rm -f "$sentinel"
+        break
+      fi
+      # Window gone without a sentinel → user bailed; leave the feed item.
+      tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || break
+      sleep 2
+    done
+  ) </dev/null >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+
+  echo "review-pr: opened walkthrough for PR #$num (window review-$num)."
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────────────────
+act_on() { # pr-number
+  local num="$1" row id comments_json final_md
+  row="$(resolve_item "$num")"
+  if [ -z "$row" ]; then
+    echo "review-pr: no pending critique for PR #$num in the feed." >&2
+    exit 1
+  fi
+  IFS=$'\t' read -r id comments_json final_md <<< "$row"
+  if [ -z "$comments_json" ] || [ ! -f "$comments_json" ]; then
+    echo "review-pr: comments.json for PR #$num not found ($comments_json)." >&2
+    exit 1
+  fi
+  launch "$num" "$id" "$comments_json" "$final_md"
+}
+
+case "${1:-}" in
+  --pick)
+    pr="$(pick_pr)" || { echo "cancelled." >&2; exit 0; }
+    [ -n "$pr" ] && act_on "$pr"
+    ;;
+  ''|-h|--help)
+    awk 'NR==1 {next} /^#/ {sub(/^# ?/, ""); print; next} {exit}' "$0"
+    ;;
+  *[!0-9]*)
+    echo "review-pr: expected a PR number or --pick, got '$1'" >&2; exit 2 ;;
+  *)
+    act_on "$1" ;;
+esac

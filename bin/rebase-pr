@@ -1,0 +1,309 @@
+#!/usr/bin/env bash
+# rebase-pr — keep your open PRs current with main, unattended, and fix what the
+# rebase breaks. The stack-aware companion to chore-pr.
+#
+# What it does, per run:
+#   1. Sweep your open (non-draft) PRs and read each one's base + mergeState.
+#   2. Build the stack DAG (a PR whose base is another PR's head is a child) and
+#      process it BASE-FIRST (topological order).
+#   3. A PR is rebased if it is directly out of date (mergeState BEHIND/DIRTY) OR
+#      an ancestor in its stack moved this run (so children re-stack onto the
+#      updated parent).
+#   4. Each branch is rebased in a disposable worktree by a headless `claude -p`
+#      that resolves conflicts, then runs this repo's pre-push gates
+#      (typecheck / lint / knip / bun-ptr tests, or cargo for Rust) and fixes
+#      anything the rebase broke — committing fixes, never pushing.
+#   5. On a clean, green result the *bash tail* force-with-leases the branch to
+#      origin. A conflict/blocked/red branch is never pushed, and its
+#      descendants are skipped (can't stack onto a parent we couldn't update).
+#
+# Why this and not scripts/brup.sh: brup rebases every jj/* branch onto main in
+# the real checkout, is not stack-aware (a child stacked on a feature branch is
+# wrongly rebased onto main), skips any conflict, and never pushes. rebase-pr
+# rebases onto each PR's true base, re-parents children with `git rebase --onto`,
+# resolves conflicts + fixes breakage, and updates the PRs.
+#
+# Correctness hinge (re-parenting): after a parent is rebased+pushed, a child is
+# rebased with `git rebase --onto origin/<parent> <SNAPSHOT of origin/<parent>>`
+# — replaying only the child's own commits onto the new parent tip. A plain
+# `git rebase origin/<parent>` would re-absorb the parent's rebased commits.
+#
+# Permission posture: same as chore-pr. Claude runs --permission-mode dontAsk with
+# an explicit --allowedTools list (auto DENIES Edit/Write headlessly). The global
+# deny-list still backstops it (git push --force* is denied FOR CLAUDE — which is
+# why the force-with-lease push lives in the bash tail after Claude exits, exactly
+# like chore-pr's push). Never --dangerously-skip-permissions: work policy.
+#
+# Scheduled by ~/setup/auto-claude as a launchd job at 02:00 weekdays —
+# overnight, after West Coast devs stop pushing, so PRs are freshly rebased and
+# on-point by morning. Depends on the single repeating pmset wake being set to
+# ~01:58 (see setup/auto-claude's closing note; macOS allows only one).
+#
+# Usage:
+#   rebase-pr              # real run: rebase + fix + force-with-lease push
+#   rebase-pr --dry-run    # print the stack graph and per-PR rebase plan; no
+#                          # worktrees, no Claude, no push (safe, read-only)
+set -euo pipefail
+
+# Hold the machine awake for the whole run (see chore-pr for the pmset note).
+if [ -z "${REBASE_PR_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
+  export REBASE_PR_CAFFEINATED=1
+  exec caffeinate -i "$0" "$@"
+fi
+
+AUTO_CLAUDE_FEED_SOURCE=rebase-pr
+. "$HOME/.config/auto-claude/config.sh"
+
+DRY_RUN=false
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=true ;;
+    --help|-h) sed -n '42,45p' "$0" | sed 's/^# \?//'; exit 0 ;;
+    *) echo "unknown argument: $arg" >&2; exit 2 ;;
+  esac
+done
+
+# ── Permission posture (headless-safe) ───────────────────────────────────────
+# --permission-mode dontAsk executes ONLY tools matching the allow-list and never
+# prompts — the correct posture for an unattended -p run (verified on claude
+# 2.1.212: `auto` DENIES Edit/Write with no TTY, which blocked ~10 PRs/night). The
+# allow-list must be ONE comma-joined --allowedTools argument (separate args are
+# not parsed as an allow-list). The ~/.claude/settings.json deny-list still
+# composes under dontAsk (verified: `git push --force*` is refused), so the
+# force-with-lease push stays in the bash tail after Claude exits. Never
+# --dangerously-skip-permissions / bypassPermissions: work policy.
+base_flags=(--permission-mode dontAsk --allowedTools
+  "Read,Edit,Write,Bash(git:*),Bash(bun:*),Bash(bun-ptr:*),Bash(cargo:*),Bash(mkdir:*),Bash(date:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*)")
+
+cd "$WORK_REPO"
+
+# ── Sweep: open non-draft PRs authored by me ─────────────────────────────────
+prs_json="$(gh pr list --author @me --state open \
+  --json number,headRefName,baseRefName,isDraft,mergeStateStatus --limit 100 \
+  | jq -c '[.[] | select(.isDraft==false)]')"
+
+count="$(printf '%s' "$prs_json" | jq 'length')"
+if [ "$count" -eq 0 ]; then
+  echo "$(date '+%F %T') no open non-draft PRs; nothing to do"
+  notify-feed rebase-pr "No PRs to rebase" "No open non-draft PRs authored by you."
+  exit 0
+fi
+echo "=== $(date '+%F %T') rebase-pr sweep: $count open PR(s)"
+
+# Maps keyed by head branch.
+declare -A HEAD_NUM HEAD_BASE HEAD_STATE IN_SET
+while IFS=$'\t' read -r num head base state; do
+  HEAD_NUM["$head"]="$num"
+  HEAD_BASE["$head"]="$base"
+  HEAD_STATE["$head"]="$state"
+  IN_SET["$head"]=1
+done < <(printf '%s' "$prs_json" \
+  | jq -r '.[] | [.number, .headRefName, .baseRefName, .mergeStateStatus] | @tsv')
+
+# Fetch every head and base ref so snapshots + rebases see real tips.
+mapfile -t all_refs < <(printf '%s' "$prs_json" \
+  | jq -r '.[] | .headRefName, .baseRefName' | sort -u)
+git fetch --quiet origin "${all_refs[@]}" || git fetch --quiet origin || true
+
+# Snapshot ORIGINAL origin tips now — the child re-parent step needs the
+# pre-rebase parent tip (SNAPSHOT), captured before we push anything.
+declare -A SNAP
+snap() { # ref -> cached origin SHA (empty if unknown)
+  local ref="$1"
+  if [ -z "${SNAP[$ref]+x}" ]; then
+    SNAP["$ref"]="$(git rev-parse --verify --quiet "origin/$ref" || true)"
+  fi
+  printf '%s' "${SNAP[$ref]}"
+}
+for h in "${!IN_SET[@]}"; do snap "$h" >/dev/null; snap "${HEAD_BASE[$h]}" >/dev/null; done
+snap "$BASE_BRANCH" >/dev/null
+
+# ── Topological order (base-first) over the in-set stack DAG ─────────────────
+# Edge parent(head)->child(head) exists when a child's base is another head in
+# the set. Roots are PRs whose base is main or an external (out-of-set) branch.
+declare -A INDEG
+for h in "${!IN_SET[@]}"; do INDEG["$h"]=0; done
+for h in "${!IN_SET[@]}"; do
+  b="${HEAD_BASE[$h]}"
+  if [ -n "${IN_SET[$b]:-}" ]; then INDEG["$h"]=$(( ${INDEG[$h]} + 1 )); fi
+done
+
+order=()
+queue=()
+for h in "${!IN_SET[@]}"; do [ "${INDEG[$h]}" -eq 0 ] && queue+=("$h"); done
+mapfile -t queue < <(printf '%s\n' "${queue[@]}" | sort)   # deterministic order
+while [ "${#queue[@]}" -gt 0 ]; do
+  cur="${queue[0]}"; queue=("${queue[@]:1}")
+  order+=("$cur")
+  for h in "${!IN_SET[@]}"; do
+    if [ "${HEAD_BASE[$h]}" = "$cur" ]; then
+      INDEG["$h"]=$(( ${INDEG[$h]} - 1 ))
+      if [ "${INDEG[$h]}" -eq 0 ]; then
+        queue+=("$h")
+        mapfile -t queue < <(printf '%s\n' "${queue[@]}" | sort)
+      fi
+    fi
+  done
+done
+# Any head not in `order` sits in a base cycle (shouldn't happen); append it so
+# it is still attempted, and note it.
+for h in "${!IN_SET[@]}"; do
+  case " ${order[*]} " in *" $h "*) : ;; *) echo "WARN: base cycle involving $h; appending"; order+=("$h") ;; esac
+done
+
+# A PR is directly out of date when GitHub says it is behind or conflicting
+# with its base.
+directly_stale() { case "${HEAD_STATE[$1]}" in BEHIND|DIRTY) return 0 ;; *) return 1 ;; esac; }
+
+# ── Dry run: print the graph + per-PR plan, then stop (no side effects) ──────
+if [ "$DRY_RUN" = true ]; then
+  echo "--- stack graph (base-first) ---"
+  for h in "${order[@]}"; do
+    b="${HEAD_BASE[$h]}"
+    if [ -n "${IN_SET[$b]:-}" ]; then rel="stacked on PR #${HEAD_NUM[$b]} ($b)"; else rel="base $b"; fi
+    stale=$(directly_stale "$h" && echo "OUT-OF-DATE" || echo "clean-vs-base")
+    printf "  PR #%-5s %-55s %-14s %s\n" "${HEAD_NUM[$h]}" "$h" "${HEAD_STATE[$h]}" "$rel [$stale]"
+  done
+  echo "--- rebase plan ---"
+  for h in "${order[@]}"; do
+    b="${HEAD_BASE[$h]}"
+    if [ -n "${IN_SET[$b]:-}" ]; then
+      printf "  #%s %s: git rebase --onto origin/%s %s  (re-parent onto updated #%s)\n" \
+        "${HEAD_NUM[$h]}" "$h" "$b" "$(snap "$b")" "${HEAD_NUM[$b]}"
+    else
+      printf "  #%s %s: git rebase origin/%s\n" "${HEAD_NUM[$h]}" "$h" "$b"
+    fi
+  done
+  echo "(dry run — no worktrees, no Claude, no push)"
+  exit 0
+fi
+
+# ── Real run ─────────────────────────────────────────────────────────────────
+wt="$WORKTREE_DIR/rebase-pr"
+cleanup() { cd "$WORK_REPO"; git worktree remove --force "$wt" 2>/dev/null || true; }
+trap cleanup EXIT
+mkdir -p "$WORKTREE_DIR"
+
+declare -A MOVED FAILED   # head -> 1 once pushed / once it (or an ancestor) failed
+pushed=(); skipped=(); blocked=(); unchanged=()
+
+rebase_one() { # head
+  local head="$1" base num snap_base target rebase_cmd
+  base="${HEAD_BASE[$head]}"
+  num="${HEAD_NUM[$head]}"
+
+  # Skip if an ancestor failed — we can't stack onto a parent we couldn't update.
+  if [ -n "${IN_SET[$base]:-}" ] && [ -n "${FAILED[$base]:-}" ]; then
+    FAILED["$head"]=1; skipped+=("#$num $head (ancestor #${HEAD_NUM[$base]} failed)"); return 0
+  fi
+
+  # Rebase this PR if it is directly stale OR its in-set base moved this run.
+  local base_moved=""; [ -n "${IN_SET[$base]:-}" ] && [ -n "${MOVED[$base]:-}" ] && base_moved=1
+  if ! directly_stale "$head" && [ -z "$base_moved" ]; then
+    unchanged+=("#$num $head"); return 0
+  fi
+
+  # Refresh refs so a just-pushed parent tip is visible.
+  git fetch --quiet origin "$head" "$base" 2>/dev/null || true
+
+  if [ -n "${IN_SET[$base]:-}" ]; then
+    snap_base="$(snap "$base")"          # pre-rebase parent tip (captured at start)
+    target="origin/$base"                # current (rebased+pushed) parent tip
+    rebase_cmd="git rebase --onto $target $snap_base"
+  else
+    rebase_cmd="git rebase origin/$base" # root / external base
+  fi
+
+  echo "--- #$num $head  (base $base) ---"
+  notify-feed rebase-pr "rebase-pr: #$num $head" "Rebasing onto $base and fixing breakage."
+
+  # Fresh detached worktree at the CURRENT origin/<head> (detached avoids
+  # colliding with a branch checked out in the real repo).
+  git worktree remove --force "$wt" 2>/dev/null || true
+  if ! git worktree add --quiet --detach "$wt" "origin/$head"; then
+    FAILED["$head"]=1; blocked+=("#$num $head (worktree add failed)")
+    notify "rebase-pr: could not create worktree for #$num $head"; return 0
+  fi
+
+  local prompt="You are updating PR #$num ($head) unattended in a disposable, DETACHED git worktree. The working tree is currently at origin/$head. Do NOT ask questions.
+
+Goal: rebase this branch onto its up-to-date base ($base), resolve any conflicts, then make every pre-push gate pass by fixing whatever the rebase broke.
+
+1. Run exactly this rebase:
+     $rebase_cmd
+   This replays only THIS branch's own commits onto the updated base. If it stops on conflicts, resolve them preserving the intent of BOTH sides (keep this branch's change AND the incoming base change), then \`git add\` the resolved files and \`git rebase --continue\`. Repeat until the rebase completes. Never \`git rebase --skip\` a commit to make it go away. Never change the base or run --onto with different arguments.
+
+2. Once the rebase is complete, run this repo's pre-push gates for whatever the branch touches and FIX anything the rebase broke (commit the fixes in small logical commits; the commit-message skill hook will fire — follow it; never add Co-Authored-By):
+   - TypeScript/app changes: in apps/web run \`bun run typecheck\`, \`bun run lint\`, \`bun run knip\`, and the relevant tests with \`bun-ptr <path>\` (never bare \`bun test\`). Fix type errors, lint failures, dead-code from removed/renamed symbols, and any tests the rebase broke.
+   - Rust changes: run \`cargo clippy\` and \`cargo test\` for the affected crates and fix breakage.
+   Use \`git switch\`/\`git restore\`, never \`git checkout\`. Do NOT push. Do NOT touch anything unrelated to reconciling this rebase.
+
+3. Finish:
+   - If the rebase completed AND all gates are green: create an empty file named .rebase-ok in the worktree root, then stop.
+   - If you hit a conflict you cannot safely resolve, or breakage you cannot fix without a product decision: run \`git rebase --abort\` if a rebase is in progress, write .rebase-blocked.md explaining exactly what is unresolved, do NOT create .rebase-ok, and stop."
+
+  set +e
+  ( cd "$wt" && claude -p "$prompt" "${base_flags[@]}" --model sonnet )
+  local rc=$?
+  set -e
+
+  if [ -f "$wt/.rebase-blocked.md" ] || [ ! -f "$wt/.rebase-ok" ] || [ "$rc" -ne 0 ]; then
+    # $head contains slashes (e.g. devin/cus-1235-…); slugify for the log
+    # filename so the cp target's parent dir exists (a raw $head would make cp
+    # fail silently and the notify would cite a file that was never written).
+    local head_slug="${head//\//-}"
+    local blocked_log="rebase-blocked-$head_slug-$num.md"
+    if [ -f "$wt/.rebase-blocked.md" ]; then cp "$wt/.rebase-blocked.md" "$LOG_DIR/$blocked_log" 2>/dev/null || true; fi
+    ( cd "$wt" && git rebase --abort 2>/dev/null || true )
+    FAILED["$head"]=1; blocked+=("#$num $head")
+    notify "rebase-pr blocked on #$num $head (left as-is); see logs/$blocked_log"
+    return 0
+  fi
+
+  # Guard: a rebase must not be mid-flight, and there must be no conflict markers.
+  if ( cd "$wt" && test -d "$(git rev-parse --git-path rebase-merge 2>/dev/null)" -o -d "$(git rev-parse --git-path rebase-apply 2>/dev/null)" ); then
+    FAILED["$head"]=1; blocked+=("#$num $head (rebase left in progress)")
+    ( cd "$wt" && git rebase --abort 2>/dev/null || true )
+    notify "rebase-pr: rebase still in progress for #$num $head; skipped"; return 0
+  fi
+
+  local new_tip old_tip
+  new_tip="$(cd "$wt" && git rev-parse HEAD)"
+  old_tip="$(snap "$head")"
+  if [ "$new_tip" = "$old_tip" ]; then
+    unchanged+=("#$num $head (already current)"); return 0
+  fi
+
+  # Push from the bash tail with an explicit lease against the tip we started
+  # from — refuses if origin/<head> moved under us since the sweep.
+  if git push --force-with-lease="$head:$old_tip" origin "$new_tip:refs/heads/$head"; then
+    # Refresh the remote-tracking ref so a child's `--onto origin/<parent>`
+    # targets this new tip. SNAP is left UNTOUCHED: it holds original origin
+    # tips (= fork points), which the child re-parent step reads as its base.
+    git fetch --quiet origin "$head" || true
+    MOVED["$head"]=1
+    pushed+=("#$num $head")
+    notify "rebase-pr updated #$num $head (rebased onto $base)"
+  else
+    FAILED["$head"]=1; blocked+=("#$num $head (push rejected — origin moved)")
+    notify "rebase-pr: force-with-lease rejected for #$num $head (origin moved); skipped"
+  fi
+}
+
+for h in "${order[@]}"; do rebase_one "$h"; done
+
+# ── Summary ──────────────────────────────────────────────────────────────────
+summary="pushed: ${#pushed[@]} | blocked: ${#blocked[@]} | skipped: ${#skipped[@]} | unchanged: ${#unchanged[@]}"
+echo "=== $(date '+%F %T') rebase-pr done — $summary"
+[ "${#pushed[@]}" -gt 0 ]    && printf '  updated:   %s\n' "${pushed[@]}"
+[ "${#blocked[@]}" -gt 0 ]   && printf '  blocked:   %s\n' "${blocked[@]}"
+[ "${#skipped[@]}" -gt 0 ]   && printf '  skipped:   %s\n' "${skipped[@]}"
+[ "${#unchanged[@]}" -gt 0 ] && printf '  unchanged: %s\n' "${unchanged[@]}"
+
+body="Updated ${#pushed[@]}, blocked ${#blocked[@]}, skipped ${#skipped[@]}, unchanged ${#unchanged[@]}."
+[ "${#pushed[@]}" -gt 0 ]  && body="$body"$'\n'"Updated: ${pushed[*]}"
+[ "${#blocked[@]}" -gt 0 ] && body="$body"$'\n'"Blocked: ${blocked[*]}"
+notify-feed rebase-pr "rebase-pr: $summary" "$body"
+
+# Non-zero exit if anything needs a human, so a launchd failure surfaces.
+[ "${#blocked[@]}" -eq 0 ] && [ "${#skipped[@]}" -eq 0 ]

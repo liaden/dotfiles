@@ -5,10 +5,28 @@
 # including parked WIP — is never touched. The item leaves the hopper only
 # once a PR actually exists; failures leave it queued and notify.
 #
-# Permission posture: acceptEdits plus a scoped Bash allowlist (git + common
-# JS/Rust test runners). Commands outside the allowlist are denied and the
-# task stays in the hopper — widen the list here if a legitimate command
-# keeps getting denied. Never --dangerously-skip-permissions: work policy.
+# Tiered pipeline. Substantive chores run through the repo's own skill flow as
+# SEPARATE headless `claude -p` stages this harness orchestrates:
+#   Stage A  plan-create / rust-impl-plan  → a plan committed into the PR
+#   Stage B  critique (Plan target, --fast) → review, folded into implement
+#   Stage C  a custom implement prompt      → the actual change, self-committed
+# Trivial chores skip the pipeline and take the single-shot path. Routing is by
+# an optional leading hopper tag ([trivial]/[fix]/[feat]/[rust]); untagged items
+# are classified by a cheap haiku call (defaulting to the full pipeline, never
+# silently "trivial").
+#
+# The interactive skills are adapted for headless use: plan-create's Phase-0
+# "ask and wait" gate is overridden ("resolve ambiguity yourself, or write
+# .auto-claude-blocked.md and stop"); critique on a Plan path is already
+# headless-safe (its walkthrough self-disables with no TTY); plan-implement is
+# NOT used (its REVIEW GATEs would hang) — Stage C is a bespoke prompt instead.
+#
+# Permission posture: --permission-mode dontAsk with an explicit --allowedTools
+# list. Verified on claude 2.1.212 that `auto` DENIES Edit/Write in a headless -p
+# run (no TTY to approve), which blocked the overnight jobs; dontAsk pre-approves
+# exactly the listed tools and never prompts. The global deny-list in
+# ~/.claude/settings.json (force-push, reset --hard, rm -rf, …) still composes as
+# the backstop under dontAsk. Never --dangerously-skip-permissions: work policy.
 set -euo pipefail
 
 # Hold the machine awake for the whole run. The launchd schedule (or a pmset
@@ -35,14 +53,77 @@ if [ -z "$item" ]; then
   notify-feed chore-pr "Hopper empty" "No chores queued; nothing to do."
   exit 0
 fi
+
+# ── Permission posture (headless-safe) ───────────────────────────────────────
+# --permission-mode dontAsk executes ONLY tools matching the allow-list and never
+# prompts — the correct posture for an unattended -p run (verified on claude
+# 2.1.212: `auto` DENIES Edit/Write with no TTY). The allow-list must be ONE
+# comma-joined --allowedTools argument. The ~/.claude/settings.json deny-list
+# still composes under dontAsk (git push --force* etc. remain refused). Never
+# --dangerously-skip-permissions / bypassPermissions: work policy.
+base_flags=(--permission-mode dontAsk --allowedTools
+  "Read,Edit,Write,Bash(git:*),Bash(bun:*),Bash(bun-ptr:*),Bash(npm:*),Bash(npx:*),Bash(pnpm:*),Bash(yarn:*),Bash(cargo:*),Bash(mkdir:*),Bash(date:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(rg:*)")
+
+# ── Classify: untagged items get a category before we spend a worktree ───────
+# One cheap haiku call, auto mode; outputs a single category word. Anything
+# unexpected defaults to "feat" (the full pipeline) — never silently "trivial".
+classify() {
+  local out word
+  set +e
+  out="$(claude -p "Classify the following software chore into exactly one category. Output ONLY the single lowercase category word and nothing else.
+
+Categories:
+- trivial — a tiny, obviously-safe change: a typo, a comment/doc-string edit, a trivial rename, a one-line copy tweak.
+- fix — fixing a bug in existing behaviour.
+- feat — a new feature, a refactor, or any non-trivial change to TypeScript/app code.
+- rust — a change that touches the Rust binary (workhorse) or Cargo crates.
+
+When unsure between trivial and a heavier category, choose the heavier one.
+
+Chore: $item" --permission-mode auto --model haiku 2>/dev/null)"
+  set -e
+  word="$(printf '%s' "$out" | tr '[:upper:]' '[:lower:]' | grep -oE 'trivial|fix|feat|rust' | head -1)"
+  case "$word" in
+    trivial|fix|feat|rust) printf '%s' "$word" ;;
+    *) printf 'feat' ;;
+  esac
+}
+
+# ── Tag parse: strip a leading [tag] off the item; unknown brackets stay text ─
+tag=""
+if [[ "$item" =~ ^\[([a-zA-Z]+)\][[:space:]]*(.*)$ ]]; then
+  candidate="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')"
+  case "$candidate" in
+    trivial|fix|feat|rust)
+      tag="$candidate"
+      item="${BASH_REMATCH[2]}"
+      ;;
+    *) : ;;  # unknown bracket token → leave item verbatim (literal text)
+  esac
+fi
+
 echo "=== $(date '+%F %T') chore: $item"
-
 cd "$WORK_REPO"
-git fetch origin "$BASE_BRANCH"
 
+if [ -z "$tag" ]; then
+  tag="$(classify)"
+fi
+echo "chore [$tag]: $item"
+
+# Slug/branch derive from the tag-stripped item.
 slug="$(printf '%s' "$item" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | cut -c1-40 | sed 's/^-//; s/-$//')"
 branch="chore/auto-$slug-$(date +%m%d%H%M)"
 wt="$WORKTREE_DIR/$slug"
+today="$(date +%F)"
+plan_path=".llm/plans/$today-$slug.md"
+
+# Set by run_pipeline once the plan commit exists; the "no impl commits" gate
+# below keys off it so a plan-only PR can never ship. Empty on the trivial path.
+plan_commit=""
+# Resolved by run_critique; read by run_implement.
+critique_path=""
+
+git fetch origin "$BASE_BRANCH"
 
 cleanup() {
   cd "$WORK_REPO"
@@ -54,42 +135,196 @@ mkdir -p "$WORKTREE_DIR"
 git worktree add -b "$branch" "$wt" "origin/$BASE_BRANCH"
 cd "$wt"
 
-prompt="You are working unattended in a disposable git worktree on branch $branch.
+handle_blocked() {
+  cp .auto-claude-blocked.md "$LOG_DIR/blocked-$slug.md"
+  notify "chore blocked, see logs/blocked-$slug.md: $item"
+}
+
+# ── Stage A: plan ────────────────────────────────────────────────────────────
+# Invoke plan-create (ts) or rust-impl-plan (rust). The skill only PRINTS a
+# plan; the harness captures stdout into the plan file. The Phase-0 clarify gate
+# is overridden for headless operation.
+run_plan() {
+  local kind="$1" skill
+  if [ "$kind" = rust ]; then skill="rust-impl-plan"; else skill="plan-create"; fi
+  mkdir -p .llm/plans
+
+  local prompt="You are producing an implementation plan, working unattended in a disposable git worktree on branch $branch.
+
+Task: $item
+
+Invoke the \`$skill\` skill (via the Skill tool) and produce the complete phased plan for this task.
+
+IMPORTANT headless overrides (you have no user to answer questions):
+- Do NOT ask any clarifying questions and do NOT wait for input. In Phase 0, resolve every ambiguity yourself using your best judgment and explicitly state the assumptions you made.
+- Produce the full plan as your final message on standard output. Do not include tool narration in the final message — that message is captured verbatim as the plan file.
+- Only if it is genuinely unsafe to plan without more information, do NOT print a plan: instead write a file named .auto-claude-blocked.md explaining exactly what decision or information is needed, then stop."
+
+  set +e
+  claude -p "$prompt" "${base_flags[@]}" --model opus > "$plan_path"
+  local rc=$?
+  set -e
+  if [ "$rc" -ne 0 ]; then
+    notify "chore-pr errored during planning: $item (left in hopper)"
+    return 1
+  fi
+  return 0
+}
+
+# ── Stage B: critique ─────────────────────────────────────────────────────────
+# critique on a Plan path (--fast) is single-pass, headless-safe, and writes
+# .llm/critique/<date>-<slug>/final.md (gitignored → auto-excluded from the PR).
+# Output is streamed to the run log and the final.md path is captured for C.
+run_critique() {
+  local out rc
+  set +e
+  out="$(claude -p "Invoke the \`critique\` skill (via the Skill tool) to critique the implementation plan file below. Pass it exactly these arguments: \"$plan_path --fast\". This is a Plan target (a file under .llm/plans/): a single-pass, headless-safe review that writes a session folder containing final.md. When done, report the absolute path to the final.md you wrote.
+
+Plan file: $plan_path" "${base_flags[@]}" --model opus 2>&1)"
+  rc=$?
+  set -e
+  printf '%s\n' "$out"   # surface critique to the run log
+  if [ "$rc" -ne 0 ]; then
+    notify "chore-pr errored during critique: $item (left in hopper)"
+    return 1
+  fi
+  critique_path="$(printf '%s\n' "$out" | grep -oE '(/[^[:space:]]+)?\.llm/critique/[^[:space:]]+/final\.md' | tail -1)"
+  if [ -z "$critique_path" ] || [ ! -f "$critique_path" ]; then
+    critique_path="$(ls -t .llm/critique/*/final.md 2>/dev/null | head -1 || true)"
+  fi
+  if [ -z "$critique_path" ] || [ ! -f "$critique_path" ]; then
+    notify "chore-pr: critique produced no final.md: $item (left in hopper)"
+    return 1
+  fi
+  return 0
+}
+
+# ── Stage C: implement ────────────────────────────────────────────────────────
+# A bespoke prompt (NOT plan-implement — its REVIEW GATEs hang headless). Reads
+# the plan + critique, implements folding in the critique's Must-address items,
+# self-commits in small chunks (to satisfy the Stop commit-gate), obeys CLAUDE.md.
+run_implement() {
+  local prompt="You are implementing an already-reviewed plan, working unattended in a disposable git worktree on branch $branch. Do NOT ask questions — make reasonable decisions and proceed.
+
+Task: $item
+
+The implementation plan is committed at: $plan_path
+A critique of that plan is at: $critique_path
+
+Do this:
+- Read the plan and the critique fully first.
+- Implement the plan's phases in order. Where the critique lists a \"Must address\" item, fold the fix into your implementation.
+- Follow this repo's CLAUDE.md exactly: strict typing (no any/unknown/as/!), prefer type over interface, use the Result type for fallible operations, and protect server actions with org- and role-scoped authorization checks.
+- Testing: run per-file tests with \`bun-ptr <path>\` (never bare \`bun test\`). Run the tests relevant to what you touched and fix what you break.
+- Git: use \`git switch\` (never \`git checkout\`). Commit in small logical chunks as you complete each coherent piece — do NOT leave one large uncommitted diff (a Stop hook enforces this). A commit-message skill hook fires on \`git commit\`; follow it. Never add Co-Authored-By lines. Do NOT push.
+- Do not modify the committed plan file or the critique, and do not touch anything unrelated to the task.
+- If the plan turns out to be genuinely unsafe or impossible to implement, make NO further commits, write .auto-claude-blocked.md explaining what decision or information is needed, then stop."
+
+  set +e
+  claude -p "$prompt" "${base_flags[@]}" --model sonnet
+  local rc=$?
+  set -e
+  if [ "$rc" -ne 0 ]; then
+    notify "chore-pr errored during implementation: $item (left in hopper)"
+    return 1
+  fi
+  return 0
+}
+
+# ── Stage single-shot: trivial ────────────────────────────────────────────────
+# The pre-pipeline behaviour, kept for cheap items. Same rules, plus this repo's
+# toolchain notes (bun-ptr, commit-message hook, git switch).
+run_trivial() {
+  local prompt="You are working unattended in a disposable git worktree on branch $branch.
 
 Task: $item
 
 Rules:
 - Make the smallest correct change that completes the task. Follow the
-  conventions already present in this codebase.
-- Run the tests relevant to what you touched; fix what you break.
-- Commit in small logical commits with terse messages explaining WHY.
+  conventions already present in this codebase and its CLAUDE.md.
+- Run the tests relevant to what you touched with \`bun-ptr <path>\` (never bare
+  \`bun test\`); fix what you break.
+- Commit in small logical commits with terse messages explaining WHY. A
+  commit-message skill hook fires on \`git commit\`; follow it. Use \`git switch\`,
+  never \`git checkout\`. Never add Co-Authored-By lines.
 - Do not push, and do not touch anything unrelated to the task.
 - If the task is too large or ambiguous to do safely as a small PR, make
   NO commits; instead write .auto-claude-blocked.md explaining what decision
   or information is needed, then stop."
 
-claude_flags=(--permission-mode acceptEdits --allowedTools
-  "Bash(git status:*)" "Bash(git diff:*)" "Bash(git log:*)"
-  "Bash(git add:*)" "Bash(git commit:*)"
-  "Bash(npm test:*)" "Bash(npm run:*)" "Bash(npx:*)"
-  "Bash(pnpm:*)" "Bash(yarn:*)"
-  "Bash(cargo test:*)" "Bash(cargo check:*)" "Bash(cargo clippy:*)")
+  set +e
+  claude -p "$prompt" "${base_flags[@]}" --model sonnet
+  local rc=$?
+  set -e
+  if [ "$rc" -ne 0 ]; then
+    notify "chore-pr errored on: $item (left in hopper)"
+    return 1
+  fi
+  if [ -f .auto-claude-blocked.md ]; then
+    handle_blocked
+    return 1
+  fi
+  return 0
+}
 
-if ! claude -p "$prompt" "${claude_flags[@]}"; then
-  notify "chore-pr errored on: $item (left in hopper)"
-  exit 1
-fi
+# ── Pipeline sequencing: plan → critique → (commit plan) → implement ──────────
+run_pipeline() {
+  local kind="$1"
 
-if [ -f .auto-claude-blocked.md ]; then
-  cp .auto-claude-blocked.md "$LOG_DIR/blocked-$slug.md"
-  notify "chore blocked, see logs/blocked-$slug.md: $item"
-  exit 1
-fi
+  notify-feed chore-pr "chore-pr: planning ($kind)" "Stage A — $([ "$kind" = rust ] && echo rust-impl-plan || echo plan-create) for: $item"
+  run_plan "$kind" || return 1
+  if [ -f .auto-claude-blocked.md ]; then
+    handle_blocked
+    return 1
+  fi
+  if [ "$(wc -l < "$plan_path")" -lt 5 ]; then
+    notify "chore-pr: plan too short to trust: $item (left in hopper)"
+    return 1
+  fi
 
-# Commit stragglers, then require actual commits beyond base.
+  notify-feed chore-pr "chore-pr: critique" "Stage B — critique of the plan for: $item"
+  run_critique || return 1
+
+  # Commit the plan file HERE, in the harness, so the commit-message PreToolUse
+  # hook (which only fires on Claude's own commits) doesn't intercept it. A body
+  # is required: the repo's gitlint commit-msg hook rejects a body-less message
+  # (B6), and this harness commit is NOT wrapped in `set +e`, so a rejection
+  # would abort the whole job under `set -euo pipefail`.
+  git add "$plan_path"
+  git commit -m "docs: implementation plan for chore: $item" \
+    -m "Auto-generated by chore-pr (Stage A). Committed by the harness before the implement stage; see .llm/plans for the plan."
+  plan_commit="$(git rev-parse HEAD)"
+
+  notify-feed chore-pr "chore-pr: implement" "Stage C — implementing: $item"
+  run_implement || return 1
+  if [ -f .auto-claude-blocked.md ]; then
+    handle_blocked
+    return 1
+  fi
+  return 0
+}
+
+# ── Route by tier ─────────────────────────────────────────────────────────────
+case "$tag" in
+  trivial)   run_trivial      || exit 1 ;;
+  fix|feat)  run_pipeline ts  || exit 1 ;;
+  rust)      run_pipeline rust || exit 1 ;;
+  *)         run_pipeline ts  || exit 1 ;;  # defensive: unknown tag → full pipeline
+esac
+
+# Commit stragglers, then require actual commits beyond base. A body is required
+# (gitlint B6), and this harness commit runs under `set -e`, so a body-less
+# message would abort the job.
 if [ -n "$(git status --porcelain)" ]; then
   git add -A
-  git commit -m "chore: $item"
+  git commit -m "chore: $item" \
+    -m "Auto-committed by chore-pr: files left uncommitted by the implement stage."
+fi
+
+# Plan-only guard: on the pipeline path a plan commit alone must never ship.
+if [ -n "$plan_commit" ] && [ "$(git rev-list --count "$plan_commit"..HEAD)" -eq 0 ]; then
+  notify "chore-pr: plan produced but no implementation commits: $item (left in hopper)"
+  exit 1
 fi
 if [ "$(git rev-list --count "origin/$BASE_BRANCH"..HEAD)" -eq 0 ]; then
   notify "chore-pr produced no changes: $item (left in hopper)"
@@ -101,8 +336,9 @@ gh pr create --draft \
   --title "chore: $item" \
   --body "Automated draft from the auto-claude chore hopper — review before merging.
 
+Tier: $tag
 Task: $item"
 
 hopper rm 1
-notify "Draft PR ready: $item"
+notify "Draft PR ready [$tag]: $item"
 echo "=== $(date '+%F %T') done: $item"

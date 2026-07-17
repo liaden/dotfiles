@@ -4,7 +4,10 @@
 set -euo pipefail
 
 printf 'Add chore to the hopper (empty to cancel):\n\n'
-read -r -p 'chore> ' chore
+# `read` returns non-zero on EOF (popup dismissed / Ctrl-D with no input). Under
+# `set -e` that would abort before the empty-check and make `display-popup -E`
+# surface an error, so tolerate it and fall through to the clean cancel below.
+read -r -p 'chore> ' chore || true
 
 # Trim leading/trailing whitespace; cancel silently on empty input.
 chore="${chore#"${chore%%[![:space:]]*}"}"

@@ -5,9 +5,14 @@
 #                                     change via fswatch (default mode)
 #   morning-feed --raw                dump plain text once (piping / quick look)
 #   morning-feed --source <name>      only show entries from <name>
+#   morning-feed --pick-reviews       one-shot: open the pending-critique picker
+#                                     (delegates to `review-pr --pick`). Bound to
+#                                     a tmux key; the always-on sidebar stays a
+#                                     passive watcher.
 #
-# Reads ~/.local/state/morning-feed/feed.ndjson (one JSON record per line).
-# Newest-first, last 3 days only, compact layout for a ~38-col pane.
+# Reads the spool through the `feed query` CLI (the one shared read path, which
+# owns windowing + tolerates legacy id-less records). Newest-first, last 3 days
+# only, compact layout for a ~38-col pane.
 set -euo pipefail
 
 FEED="$HOME/.local/state/morning-feed/feed.ndjson"
@@ -23,11 +28,22 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --watch) mode="watch" ;;
     --raw)   mode="raw" ;;
+    --pick-reviews) mode="pick" ;;
     --source) shift; filter="${1:-}" ;;
-    *) echo "usage: morning-feed [--watch|--raw] [--source <name>]" >&2; exit 2 ;;
+    *) echo "usage: morning-feed [--watch|--raw|--pick-reviews] [--source <name>]" >&2; exit 2 ;;
   esac
   shift
 done
+
+# Picker mode is a one-shot passthrough to the interactive consumer; it does not
+# touch the renderer path below.
+if [ "$mode" = pick ]; then
+  exec review-pr --pick
+fi
+
+# Resolve the `feed` CLI (shared read path). Prefer PATH; fall back to a sibling
+# of this script if PATH is bare (minimal launchd/tmux env).
+FEED_BIN="$(command -v feed || echo "$(dirname "$0")/feed")"
 
 # Stable ANSI color per source (256-color). Unknown sources hash to a color.
 color_for() {
@@ -51,20 +67,14 @@ color_for() {
 }
 
 # Records from the last 3 days, newest-first, tab-separated: ts src title body.
+# Delegates to `feed query` so windowing + newest-first ordering live in the one
+# shared read path (which also tolerates legacy id-less records).
 recent_records() {
-  local cutoff
-  cutoff="$(date -v-2d '+%Y-%m-%d' 2>/dev/null || date -d '2 days ago' '+%Y-%m-%d')"
-  [ -f "$FEED" ] || return 0
-  jq -r --arg cutoff "$cutoff" --arg filter "$filter" '
-    select((.ts[0:10]) >= $cutoff)
-    | select($filter == "" or .source == $filter)
-    | [.ts, .source, .title, (.body // "")] | @tsv
-  ' "$FEED" 2>/dev/null | tail -r 2>/dev/null || \
-  jq -r --arg cutoff "$cutoff" --arg filter "$filter" '
-    select((.ts[0:10]) >= $cutoff)
-    | select($filter == "" or .source == $filter)
-    | [.ts, .source, .title, (.body // "")] | @tsv
-  ' "$FEED" 2>/dev/null | tac
+  if [ -n "$filter" ]; then
+    "$FEED_BIN" query --source "$filter" --since-days 3
+  else
+    "$FEED_BIN" query --since-days 3
+  fi
 }
 
 # Emit ANSI-formatted feed. Arg1: 1 = color, 0 = plain.

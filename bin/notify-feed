@@ -4,14 +4,13 @@
 # Usage: notify-feed <source> <title> [body]
 #   If [body] is omitted, it is read from stdin (empty if stdin is a tty).
 #
-# Appends one NDJSON record to the spool and fires the macOS notification
-# bubble so behaviour for non-pane-watchers is preserved. Pure file +
-# notification: no auth/keychain/claude, so it works from the bare-env
-# launchd jobs (morning-update) and any future adapter.
+# Thin wrapper over `feed add` (which owns the record shape, id generation, and
+# the portable mkdir-lock), plus the macOS notification bubble so behaviour for
+# non-pane-watchers is preserved. Kept as a stable entry point so every existing
+# producer (rebase-pr, chore-pr, day-brief, …) keeps working unchanged; records
+# now carry an id via `feed add`. Pure file + notification: no auth/keychain/
+# claude, so it works from the bare-env launchd jobs and any future adapter.
 set -euo pipefail
-
-FEED_DIR="$HOME/.local/state/morning-feed"
-FEED="$FEED_DIR/feed.ndjson"
 
 source="${1:-}"
 title="${2:-}"
@@ -29,15 +28,11 @@ else
   body=""
 fi
 
-mkdir -p "$FEED_DIR"
-
-# jq -n builds the record with safe escaping (quotes, newlines, etc.).
-jq -cn \
-  --arg ts "$(date '+%Y-%m-%dT%H:%M:%S')" \
-  --arg source "$source" \
-  --arg title "$title" \
-  --arg body "$body" \
-  '{ts:$ts, source:$source, title:$title, body:$body}' >> "$FEED"
+# Append via the store-ops CLI (generates id, ts; takes the mutex). `feed` is on
+# PATH beside this script; fall back to a sibling path if PATH is bare (minimal
+# launchd env).
+FEED_BIN="$(command -v feed || echo "$(dirname "$0")/feed")"
+"$FEED_BIN" add "$source" "$title" "$body" >/dev/null
 
 # Fire the macOS bubble too (best-effort; never fail the write on this).
 if command -v osascript >/dev/null 2>&1; then
