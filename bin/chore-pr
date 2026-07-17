@@ -194,7 +194,10 @@ Plan file: $plan_path" "${base_flags[@]}" --model opus 2>&1)"
 # the plan + critique, implements folding in the critique's Must-address items,
 # self-commits in small chunks (to satisfy the Stop commit-gate), obeys CLAUDE.md.
 run_implement() {
-  local prompt="You are implementing an already-reviewed plan, working unattended in a disposable git worktree on branch $branch. Do NOT ask questions — make reasonable decisions and proceed.
+  # Advisory prior-chat context (empty if mempalace has nothing / is absent), so
+  # the autonomous implementation aligns with how similar work was decided before.
+  local recall; recall="$(ac_recall "$item" 3)"
+  local prompt="${recall}You are implementing an already-reviewed plan, working unattended in a disposable git worktree on branch $branch. Do NOT ask questions — make reasonable decisions and proceed.
 
 Task: $item
 

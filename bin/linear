@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+#
+# linear — a tiny Linear CLI over the GraphQL API, for use where the Linear MCP
+# is unavailable (headless launchd runs, `claude -p` jobs). Same auth pattern as
+# linear-standup: a personal API key from the login keychain (service
+# `linear-api`), NOT an OAuth MCP session (which may not attach headlessly).
+#
+# Auth key:  security add-generic-password -s linear-api -a "$USER" -w
+#
+# Subcommands:
+#   linear search <text> [-n N] [-j]   Search issues (default 10). Table, or -j JSON.
+#   linear issue <ID> [-j]             Fetch one issue (e.g. HIP-1234): title,
+#                                      state, assignee, description, latest comments.
+#   linear me [-j]                     My open assigned issues (quick standup view).
+#
+# -j emits raw JSON (what a headless `claude -p` job should consume); default is a
+# compact human table.
+#
+# Requires: curl, jq, and the keychain key above.
+set -uo pipefail
+
+API="https://api.linear.app/graphql"
+
+usage() {
+  awk 'NR==1 {next} /^#/ {sub(/^# ?/, ""); print; next} {exit}' "$0"
+  exit "${1:-0}"
+}
+
+command -v curl >/dev/null || { echo "linear: curl not found" >&2; exit 1; }
+command -v jq   >/dev/null || { echo "linear: jq not found" >&2; exit 1; }
+
+KEY="$(security find-generic-password -s linear-api -w 2>/dev/null || true)"
+if [ -z "$KEY" ]; then
+  echo "linear: no API key in keychain. Add one with:" >&2
+  echo "  security add-generic-password -s linear-api -a \"\$USER\" -w" >&2
+  exit 1
+fi
+
+# POST a GraphQL query (+ optional compact-JSON variables object). Echoes the raw
+# response; callers check .data / .errors. Fails hard on transport error.
+gql() { # query [variables-json]
+  local query="$1" vars="${2:-{\}}" payload
+  payload="$(jq -cn --arg q "$query" --argjson v "$vars" '{query:$q, variables:$v}')"
+  curl -sS -X POST "$API" \
+    -H "Authorization: $KEY" -H "Content-Type: application/json" \
+    --data "$payload" || { echo "linear: request failed" >&2; exit 1; }
+}
+
+# Surface GraphQL-level errors uniformly.
+check_errors() { # response
+  if ! jq -e '.data' >/dev/null 2>&1 <<<"$1"; then
+    echo "linear: API error:" >&2
+    jq -r '.errors[]?.message // "unknown error"' <<<"$1" >&2 2>/dev/null || echo "$1" >&2
+    exit 1
+  fi
+}
+
+cmd_search() {
+  local n=10 as_json=0 term=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -n) shift; n="${1:-10}" ;;
+      -j) as_json=1 ;;
+      *) term="${term:+$term }$1" ;;
+    esac
+    shift
+  done
+  [ -n "$term" ] || { echo "usage: linear search <text> [-n N] [-j]" >&2; exit 2; }
+
+  local q resp
+  q='query($q:String!,$n:Int!){ searchIssues(term:$q, first:$n){ nodes{ identifier title url state{name type} team{key} assignee{displayName} updatedAt } } }'
+  resp="$(gql "$q" "$(jq -cn --arg q "$term" --argjson n "$n" '{q:$q, n:$n}')")"
+  check_errors "$resp"
+
+  if [ "$as_json" = 1 ]; then
+    jq -c '.data.searchIssues.nodes' <<<"$resp"
+  else
+    jq -r '.data.searchIssues.nodes[]
+      | "\(.identifier)\t[\(.team.key)]\t\(.state.name)\t\(.assignee.displayName // "-")\t\(.title)"' <<<"$resp" \
+      | column -t -s $'\t'
+  fi
+}
+
+cmd_issue() {
+  local as_json=0 id=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -j) as_json=1 ;;
+      *) id="$1" ;;
+    esac
+    shift
+  done
+  [ -n "$id" ] || { echo "usage: linear issue <ID> [-j]" >&2; exit 2; }
+
+  # `issue(id:)` accepts the human identifier (HIP-1234) as well as the uuid.
+  local q resp
+  q='query($id:String!){ issue(id:$id){ identifier title url priorityLabel
+        state{name type} assignee{displayName} team{key}
+        description
+        comments(first:20){ nodes{ createdAt user{displayName} body } } } }'
+  resp="$(gql "$q" "$(jq -cn --arg id "$id" '{id:$id}')")"
+  check_errors "$resp"
+
+  if [ "$as_json" = 1 ]; then
+    jq -c '.data.issue' <<<"$resp"
+  else
+    jq -r '.data.issue
+      | "\(.identifier) [\(.team.key)] \(.state.name) — \(.title)",
+        "URL: \(.url)",
+        "Assignee: \(.assignee.displayName // "-")  Priority: \(.priorityLabel // "-")",
+        "",
+        (.description // "(no description)"),
+        "",
+        "--- comments ---",
+        (.comments.nodes[]? | "• \(.user.displayName) (\(.createdAt[0:10])): \(.body)")' <<<"$resp"
+  fi
+}
+
+cmd_me() {
+  local as_json=0
+  [ "${1:-}" = "-j" ] && as_json=1
+  local q resp
+  q='query{ viewer{ assignedIssues(first:100, orderBy:updatedAt){ nodes{
+        identifier title url state{name type} team{key} } } } }'
+  resp="$(gql "$q")"
+  check_errors "$resp"
+  # Open = not completed/canceled.
+  if [ "$as_json" = 1 ]; then
+    jq -c '[.data.viewer.assignedIssues.nodes[] | select(.state.type != "completed" and .state.type != "canceled")]' <<<"$resp"
+  else
+    jq -r '.data.viewer.assignedIssues.nodes[]
+      | select(.state.type != "completed" and .state.type != "canceled")
+      | "\(.identifier)\t[\(.team.key)]\t\(.state.name)\t\(.title)"' <<<"$resp" \
+      | column -t -s $'\t'
+  fi
+}
+
+sub="${1:-}"; [ "$#" -gt 0 ] && shift || true
+case "$sub" in
+  search) cmd_search "$@" ;;
+  issue)  cmd_issue "$@" ;;
+  me)     cmd_me "$@" ;;
+  -h|--help|"") usage 0 ;;
+  *) echo "linear: unknown subcommand '$sub'" >&2; usage 2 ;;
+esac
