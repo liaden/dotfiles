@@ -51,6 +51,7 @@ color_for() {
     day-brief)      printf '38;5;39'  ;;  # blue
     linear-standup) printf '38;5;170' ;;  # purple
     chore-pr)       printf '38;5;214' ;;  # orange
+    research-pr)    printf '38;5;80'  ;;  # cyan
     ship-digest)    printf '38;5;42'  ;;  # green
     morning-update) printf '38;5;245' ;;  # grey
     github)         printf '38;5;204' ;;  # pink

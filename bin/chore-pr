@@ -11,9 +11,14 @@
 #   Stage B  critique (Plan target, --fast) → review, folded into implement
 #   Stage C  a custom implement prompt      → the actual change, self-committed
 # Trivial chores skip the pipeline and take the single-shot path. Routing is by
-# an optional leading hopper tag ([trivial]/[fix]/[feat]/[rust]); untagged items
-# are classified by a cheap haiku call (defaulting to the full pipeline, never
-# silently "trivial").
+# an optional leading hopper tag ([trivial]/[fix]/[feat]/[rust]/[research]);
+# untagged items are classified by a cheap haiku call (defaulting to the full
+# pipeline, never silently "trivial").
+#
+# A [research] item is NOT a code change: it runs the repo's `research` skill
+# headless and delivers the resulting doc as a feed item (no branch, no PR) — so
+# one hopper can hold both "build this" and "look into this" items, and chore-pr
+# decides per item which it is. See run_research().
 #
 # The interactive skills are adapted for headless use: plan-create's Phase-0
 # "ask and wait" gate is overridden ("resolve ambiguity yourself, or write
@@ -63,18 +68,19 @@ classify() {
   out="$(claude -p "Classify the following software chore into exactly one category. Output ONLY the single lowercase category word and nothing else.
 
 Categories:
+- research — the item asks to investigate, explore, evaluate options, or "do research" WITHOUT building it yet. Strong signals: the words "research", "investigate", "explore", "look into", "evaluate", "spike", "idea", or an explicit "not implement/not a PR". When the item says it wants to understand or weigh options rather than ship a change, choose research.
 - trivial — a tiny, obviously-safe change: a typo, a comment/doc-string edit, a trivial rename, a one-line copy tweak.
 - fix — fixing a bug in existing behaviour.
 - feat — a new feature, a refactor, or any non-trivial change to TypeScript/app code.
 - rust — a change that touches the Rust binary (workhorse) or Cargo crates.
 
-When unsure between trivial and a heavier category, choose the heavier one.
+When unsure between trivial and a heavier category, choose the heavier one. Only choose research when the item clearly wants investigation rather than a code change.
 
 Chore: $item" --permission-mode auto --model haiku 2>/dev/null)"
   set -e
-  word="$(printf '%s' "$out" | tr '[:upper:]' '[:lower:]' | grep -oE 'trivial|fix|feat|rust' | head -1)"
+  word="$(printf '%s' "$out" | tr '[:upper:]' '[:lower:]' | grep -oE 'research|trivial|fix|feat|rust' | head -1)"
   case "$word" in
-    trivial|fix|feat|rust) printf '%s' "$word" ;;
+    research|trivial|fix|feat|rust) printf '%s' "$word" ;;
     *) printf 'feat' ;;
   esac
 }
@@ -84,7 +90,7 @@ tag=""
 if [[ "$item" =~ ^\[([a-zA-Z]+)\][[:space:]]*(.*)$ ]]; then
   candidate="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')"
   case "$candidate" in
-    trivial|fix|feat|rust)
+    research|trivial|fix|feat|rust)
       tag="$candidate"
       item="${BASH_REMATCH[2]}"
       ;;
@@ -112,6 +118,107 @@ plan_path=".llm/plans/$today-$slug.md"
 plan_commit=""
 # Resolved by run_critique; read by run_implement.
 critique_path=""
+
+# ── Research short-circuit (no code, no PR) ──────────────────────────────────
+# A [research] item is investigation, not a change: run the repo's `research`
+# skill headless and deliver the resulting doc to the notification-hub feed. No
+# branch, push, or PR — so it must run and return BEFORE the code-PR worktree +
+# push/PR tail below. Uses its own detached worktree + EXIT trap (installed here,
+# before the code path's `trap cleanup EXIT`, and this path exits before it).
+run_research() {
+  # Attribute every feed item from this path (incl. error notifies via notify())
+  # to research-pr. Safe to set globally: this path exits before the code tail.
+  AUTO_CLAUDE_FEED_SOURCE=research-pr
+  notify-feed research-pr "research-pr: researching" "Running the research skill (no PR) for: $item"
+  cd "$WORK_REPO"
+  git fetch --quiet origin "$BASE_BRANCH" || true
+
+  # Detached worktree at origin/main: a clean checkout has no .llm/research/, so
+  # the skill's freshness + staleness prompts have nothing to fire on (they're
+  # also overridden in the prompt), keeping the run non-interactive.
+  local wt_r="$WORKTREE_DIR/research-$slug"
+  mkdir -p "$WORKTREE_DIR"
+  git worktree remove --force "$wt_r" 2>/dev/null || true
+  git worktree add --quiet --detach "$wt_r" "origin/$BASE_BRANCH"
+  trap 'cd "$WORK_REPO"; git worktree remove --force "$wt_r" 2>/dev/null || true' EXIT
+
+  # Research needs a wider allow-list than the code path: the skill fans out to
+  # sub-agents (Task), may web-search, and loads Linear's get_issue via
+  # ToolSearch. Rebuild base_flags on top of the shared dontAsk posture.
+  ac_perm_flags "Task,WebSearch,WebFetch,ToolSearch,Bash(gh:*)"
+
+  # Advisory prior-chat context so the spike aligns with earlier decisions.
+  local recall; recall="$(ac_recall "$item" 3)"
+  local prompt="${recall}You are conducting a research spike, working unattended in a disposable detached git worktree checked out at origin/$BASE_BRANCH. There is NO user and NO TTY.
+
+Research topic: $item
+
+Invoke the \`research\` skill (via the Skill tool) to research this topic and produce its structured markdown document under .llm/research/.
+
+IMPORTANT headless overrides (you cannot ask anything and must not wait for input):
+- Skip every interactive step in the skill. Do NOT call AskUserQuestion, and do NOT prompt about freshness or staleness. This is a clean checkout at origin/$BASE_BRANCH: treat the branch as up to date and assume there is no prior research session.
+- In Step 1, do NOT ask clarifying questions — infer the most reasonable research goal and scope from the topic yourself, and state the assumptions you made in the Executive Summary.
+- This is strictly exploratory: do NOT modify any source code, and do NOT create a branch, commit, push, or open a PR.
+- Complete the skill through writing final.md, then report the ABSOLUTE path to the final.md you wrote as the last line of your final message."
+
+  local out rc
+  set +e
+  out="$( cd "$wt_r" && claude -p "$prompt" "${base_flags[@]}" --model opus 2>&1 )"
+  rc=$?
+  set -e
+  printf '%s\n' "$out"   # surface the research run to the log
+  if [ "$rc" -ne 0 ]; then
+    notify "research-pr errored on: $item (left in hopper)"
+    return 1
+  fi
+
+  # Resolve final.md: prefer a path the model printed, else newest in the worktree.
+  local final_md
+  final_md="$(printf '%s\n' "$out" | grep -oE '(/[^[:space:]]+)?\.llm/research/[^[:space:]]+/final\.md' | tail -1)"
+  if [ -n "$final_md" ] && [ ! -f "$final_md" ] && [ -f "$wt_r/$final_md" ]; then
+    final_md="$wt_r/$final_md"
+  fi
+  if [ -z "$final_md" ] || [ ! -f "$final_md" ]; then
+    final_md="$( cd "$wt_r" && ls -t .llm/research/*/final.md 2>/dev/null | head -1 || true )"
+    [ -n "$final_md" ] && [ ! -f "$final_md" ] && final_md="$wt_r/$final_md"
+  fi
+  if [ -z "$final_md" ] || [ ! -f "$final_md" ]; then
+    notify "research-pr: no final.md produced: $item (left in hopper)"
+    return 1
+  fi
+
+  # Copy the doc out of the disposable worktree ($LOG_DIR survives cleanup, and
+  # .llm/research is gitignored so it exists nowhere else). Session folder name
+  # is the doc's parent dir (e.g. 2026-07-21-some-topic).
+  local session dest
+  session="$(basename "$(dirname "$final_md")")"
+  dest="$LOG_DIR/research/$slug"
+  mkdir -p "$dest"
+  cp "$final_md" "$dest/final.md"
+
+  # Feed body: the Executive Summary section, trimmed. Fall back to a generic
+  # line if the doc has no such section.
+  local body
+  body="$(awk '/^## Executive Summary/{f=1;next} /^## /{f=0} f' "$dest/final.md" \
+    | sed '/^[[:space:]]*$/d' | head -c 700)"
+  [ -n "$body" ] || body="Research complete — see final.md."
+
+  local meta
+  meta="$(jq -cn --arg topic "$item" --arg final_md "$dest/final.md" \
+    --arg log_dir "$dest" --arg session "$session" \
+    '{topic:$topic, final_md:$final_md, log_dir:$log_dir, session:$session}')"
+
+  feed add research-pr "research: $item" "$body" --meta "$meta" >/dev/null
+  hopper rm 1
+  notify "Research ready (no PR): $item"
+  echo "=== $(date '+%F %T') research done: $item"
+  return 0
+}
+
+if [ "$tag" = research ]; then
+  run_research || exit 1
+  exit 0
+fi
 
 git fetch origin "$BASE_BRANCH"
 
