@@ -47,6 +47,9 @@ asdf install
 
 nvim +PlugInstall +qall
 
-# shipping automation: hopper/chore-pr/day-brief/ship-digest (in ~/bin)
-# needs `gh auth login` and claude installed/authed first
-./setup/auto-claude
+# shipping automation: auto-dev (nightly PR pipeline, hopper, briefs) + the
+# morning-feed notification hub. Needs `gh auth login` and claude installed/
+# authed first; auto-dev install writes the config + launchd schedules.
+brew tap liaden/junk-drawer https://github.com/liaden/junk-drawer
+brew install --HEAD liaden/junk-drawer/auto-dev   # head-only formula; pulls in morning-feed
+auto-dev install
