@@ -1,5 +1,8 @@
 if [ -x "$(command -v brew)" ]; then
-  if [[ -d /usr/local/opt/chruby/share/chruby/ ]]; then
+  if [[ -d /opt/homebrew/opt/chruby/share/chruby/ ]]; then
+    source /opt/homebrew/opt/chruby/share/chruby/chruby.sh
+    source /opt/homebrew/opt/chruby/share/chruby/auto.sh
+  elif [[ -d /usr/local/opt/chruby/share/chruby/ ]]; then
     source /usr/local/opt/chruby/share/chruby/chruby.sh
     source /usr/local/opt/chruby/share/chruby/auto.sh
   elif [[ -d /home/linuxbrew/.linuxbrew/opt/chruby ]]; then
