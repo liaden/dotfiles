@@ -75,6 +75,7 @@ export PATH="$HOME/bin:$PATH"
 # zprof
 
 export NODE_OPTIONS="--max-old-space-size=8192"
+export CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1
 
 # podman as docker drop-in replacement
 # alias docker=podman  # disabled — lima docker context
