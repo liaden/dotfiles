@@ -50,6 +50,11 @@ nvim +PlugInstall +qall
 # shipping automation: auto-dev (nightly PR pipeline, hopper, briefs) + the
 # morning-feed notification hub. Needs `gh auth login` and claude installed/
 # authed first; auto-dev install writes the config + launchd schedules.
-brew tap liaden/junk-drawer https://github.com/liaden/junk-drawer
+# junk-drawer is private, so the tap needs the SSH URL — brew runs git with
+# GIT_TERMINAL_PROMPT=0 and can't auth over HTTPS non-interactively.
+brew tap liaden/junk-drawer git@github.com:liaden/junk-drawer.git
 brew install --HEAD liaden/junk-drawer/auto-dev   # head-only formula; pulls in morning-feed
 auto-dev install
+
+# macOS allows only ONE repeating wake; this single 01:58 wake serves the 02:00 nightly
+sudo pmset repeat wake MTWRF 01:58:00
