@@ -45,6 +45,11 @@ disabled = false
 format = "[ $symbol ](fg:0 bg:7)"
 
 [os.symbols]
+# Without an explicit Macos entry starship falls back to its default emoji
+# apple, which is not in the Nerd Font and so renders via Apple Color Emoji --
+# double-width and full colour in a prompt that is otherwise flat palette
+# indices. This is nf-md-apple (U+F0035), from the Material Design range.
+Macos = "󰀵"
 Ubuntu = ""
 Linux = ""
 
