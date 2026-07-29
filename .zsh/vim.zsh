@@ -29,8 +29,10 @@ bindkey -a -s "daw" "bdw"
 bindkey -a -s "diW" "bdE"
 bindkey -a -s "daW" "bdW"
 
-# shorten latency when escaping to normal mode
-export KEYTIMEOUT=1
+# Escape latency vs. mode accuracy. At 1 (10ms) any escape sequence arriving
+# fragmented — arrow keys over ssh/tmux, paste — got split and dropped the line
+# into normal mode unnoticed. 5 (50ms) stays well under the perceptual floor.
+export KEYTIMEOUT=5
 
 # add other features back into vim cli mode
 bindkey '^P' up-history
