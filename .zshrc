@@ -71,6 +71,13 @@ test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell
 
 zsh_cache_source starship-init starship starship init zsh
 
+# starship's precmd keeps STARSHIP_DURATION shell-local; custom.time_cap in
+# starship.toml needs it in the child env to know if the duration segment
+# will render. Runs after starship's hook (add order), so it sees the value
+# for this prompt; stays silent when unset (no command ran).
+_starship_export_duration() { [[ -n ${STARSHIP_DURATION-} ]] && typeset -gx STARSHIP_DURATION }
+add-zsh-hook precmd _starship_export_duration
+
 export PATH="$HOME/bin:$PATH"
 # zprof
 

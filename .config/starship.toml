@@ -19,18 +19,16 @@ format = """
 $os\
 [](fg:7 bg:4)\
 $directory\
-[](fg:4 bg:3)\
-$git_branch\
-$git_status\
-[](fg:3)\
+${custom.dir_close}\
+([](fg:4 bg:3)$git_branch$git_status[ ](bg:3)[](fg:3))\
 $fill\
 $status\
-$cmd_duration\
 $jobs\
 $direnv\
 $nodejs$ruby$python$golang$rust\
-$username$hostname\
-[](fg:7)\
+([](fg:0)$username$hostname)\
+$cmd_duration\
+${custom.time_cap}\
 $time\
 $line_break\
 $character"""
@@ -74,7 +72,7 @@ format = "[ $symbol$branch(:$remote_branch)]($style)"
 # (p10k set every *_MAX_NUM=-1, i.e. no ">9" capping — ${count} matches that).
 [git_status]
 style = "fg:0 bg:3"
-format = "[($ahead_behind$stashed$conflicted$staged$modified$untracked )]($style)"
+format = "[($ahead_behind$stashed$conflicted$staged$modified$untracked)]($style)"
 ahead = " ⇡${count}"
 behind = " ⇣${count}"
 diverged = " ⇣${behind_count}⇡${ahead_count}"
@@ -83,6 +81,11 @@ conflicted = " ~${count}"
 staged = " +${count}"
 modified = " !${count}"
 untracked = " ?${count}"       # = VCS_UNTRACKED_ICON '?'
+
+# Right-side segments each carry their own head cap and no tail, ending
+# flush at the next segment or the terminal edge. The cap sits on the
+# default bg (p10k drew it on the left neighbour's bg) because no module
+# knows which neighbour is currently visible.
 
 # p10k: STATUS_OK=false (silent on success) and STATUS_ERROR=false, but
 # ERROR_SIGNAL/ERROR_PIPE=true — so only signals and pipe failures surface.
@@ -95,7 +98,9 @@ not_found_symbol = "✘"
 sigint_symbol = "✘"
 signal_symbol = "✘"
 style = "fg:0 bg:7"
-format = "[$symbol$signal_name]($style)"
+format = "([](fg:7)[ $symbol$signal_name ]($style))"
+pipestatus_segment_format = "$status"
+pipestatus_format = "([](fg:7)[ $pipestatus ]($style))"
 map_symbol = true
 pipestatus = true
 
@@ -103,16 +108,16 @@ pipestatus = true
 min_time = 3_000               # ms — p10k THRESHOLD=3 was SECONDS
 show_milliseconds = false
 style = "fg:0 bg:3"
-format = "[ $duration ]($style)"
+format = "[](fg:3)[ $duration ]($style)[](fg:7 bg:3)"
 
 [jobs]
 style = "fg:0 bg:7"
-format = "[ $symbol$number ]($style)"
+format = "[](fg:7)[ $symbol$number ]($style)"
 
 [direnv]
 disabled = false
 style = "fg:3 bg:0"
-format = "[ $symbol$loaded ]($style)"
+format = "[](fg:0)[ $symbol$loaded ]($style)"
 symbol = " "
 
 # p10k's asdf segment has no starship equivalent; the per-language modules read
@@ -166,3 +171,18 @@ format = "[ $time  ]($style)"
 success_symbol = "[❯](bold fg:2)"
 error_symbol = "[❯](bold fg:1)"
 vicmd_symbol = "[❮](bold fg:2)"
+
+# p10k closes the dir segment onto the gap line when no git segment follows.
+# starship cannot express "not in a repo" natively; the `when` test can.
+[custom.dir_close]
+when = '! git rev-parse --is-inside-work-tree 2>/dev/null'
+command = ''
+format = "[](fg:4)"
+
+# Time's head cap belongs to cmd_duration when that renders (drawn on bg:3);
+# this draws the plain-bg cap otherwise. Needs STARSHIP_DURATION exported by
+# the precmd hook in ~/.zshrc; 3000 mirrors cmd_duration.min_time.
+[custom.time_cap]
+when = 'test "${STARSHIP_DURATION:-0}" -lt 3000'
+command = ''
+format = "[](fg:7)"
