@@ -50,6 +50,12 @@ mkdir -p ~/.local/state/morning-update
 systemctl --user daemon-reload
 systemctl --user enable --now morning-update.timer
 
+# mempalace-refresh re-mines the local repos + Claude transcripts into the memory
+# palace. Its refresh.sh ships with the dotfiles (which also creates ~/.mempalace,
+# where the unit appends its log). Needs the mempalace CLI on PATH: uv tool install
+# mempalace. Linux-only — nothing enables this on the mac.
+systemctl --user enable --now mempalace-refresh.timer
+
 function configure_user() {
   echo "Coniguring user $1"
   sudo -E su "$1"
