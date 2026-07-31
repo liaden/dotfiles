@@ -1,6 +1,5 @@
--- config/lazy.lua — Bootstrap lazy.nvim and load plugin specs
+local M = {}
 
--- Auto-install lazy.nvim if not present
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
@@ -11,27 +10,57 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- Load all plugin specs from lua/plugins/ directory
-require('lazy').setup({
-  spec = {
-    { import = 'plugins' },  -- auto-imports all files in lua/plugins/
+local editing_plugins = {
+  { 'kylechui/nvim-surround', opts = {} },
+  { 'tpope/vim-abolish' },
+  { 'numToStr/Comment.nvim', opts = {} },
+  { 'folke/flash.nvim', opts = {} },
+}
+
+local profiles = {
+  full = {
+    spec = { { import = 'plugins' } },
+    colorschemes = { 'nightfox', 'habamax' },
   },
-  -- NOTE: defaults.lazy=false, defaults.version=false, checker.enabled=false
-  -- are all lazy.nvim defaults — no need to set them explicitly.
-  install = {
-    colorscheme = { 'nightfox', 'habamax' },  -- fallback during first install
+  firenvim = {
+    spec = vim.list_extend({
+      {
+        'glacambre/firenvim',
+        lazy = false,
+        build = function() vim.fn['firenvim#install'](0) end,
+      },
+    }, editing_plugins),
+    colorschemes = {},
   },
-  performance = {
-    rtp = {
-      -- Disable unused built-in plugins (consolidated here, not in options.lua)
-      disabled_plugins = {
-        'netrwPlugin',    -- replaced by oil.nvim
-        'tutor',
-        'tohtml',
-        'zipPlugin',
-        'tarPlugin',
-        'gzip',
+  vscode = {
+    spec = editing_plugins,
+    colorschemes = {},
+  },
+}
+
+function M.setup(profile)
+  local selected = assert(profiles[profile], 'unknown lazy profile: ' .. tostring(profile))
+  require('lazy').setup({
+    spec = selected.spec,
+    defaults = { lazy = false },
+    install = { colorscheme = selected.colorschemes },
+    checker = { enabled = false },
+    performance = {
+      rtp = {
+        disabled_plugins = profile == 'full' and {
+          'netrwPlugin',
+          'tutor',
+          'tohtml',
+          'zipPlugin',
+          'tarPlugin',
+          'gzip',
+        } or {},
       },
     },
-  },
-})
+  })
+  if profile == 'firenvim' then
+    vim.cmd.runtime('autoload/firenvim.vim')
+  end
+end
+
+return M

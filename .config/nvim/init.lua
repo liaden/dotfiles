@@ -14,27 +14,23 @@ if not pcall(require, 'vim.uri') then
   end
 end
 
--- Context detection
-local context = 'full' -- default: standalone neovim
+local profile = 'full'
 
 if vim.g.vscode then
-  context = 'vscode'
+  profile = 'vscode'
 elseif vim.g.started_by_firenvim then
-  context = 'firenvim'
+  profile = 'firenvim'
 end
 
--- Load shared options (always, all contexts)
 require('config.options')
+require('config.lazy').setup(profile)
 
-if context == 'vscode' then
-  -- Lightweight: keymaps + text plugins only
-  require('vscode.init')
-elseif context == 'firenvim' then
-  -- Minimal: basic editing for browser textareas
+if profile == 'vscode' then
+  require('config.vscode')
+elseif profile == 'firenvim' then
+  require('config.keymaps')
   require('firenvim.init')
 else
-  -- Full standalone neovim
-  require('config.lazy')     -- bootstrap lazy.nvim, load all plugins
-  require('config.keymaps')  -- keymaps (after plugins so we can reference them)
-  require('config.autocmds') -- autocommands
+  require('config.keymaps')
+  require('config.autocmds')
 end

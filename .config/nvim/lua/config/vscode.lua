@@ -1,4 +1,4 @@
--- vscode/keymaps.lua — Map leader keys to VSCode/Cursor actions
+-- config/vscode.lua — Map leader keys to VSCode/Cursor actions
 local vscode = require('vscode')
 local map = vim.keymap.set
 
