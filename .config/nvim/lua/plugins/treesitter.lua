@@ -7,34 +7,46 @@
 -- vimdoc, c, query ship with nvim itself).
 local ensure_installed = {
   'ruby', 'rust', 'bash', 'json', 'yaml', 'toml', 'html', 'css',
-  'javascript', 'typescript', 'tsx', 'regex', 'scss', 'svelte', 'typst', 'vue', 'norg', 'diff', 'gitcommit', 'git_rebase',
+  'javascript', 'typescript', 'tsx', 'regex', 'scss', 'svelte', 'typst', 'vue', 'diff', 'gitcommit', 'git_rebase',
   'dockerfile', 'terraform', 'sql', 'latex', 'bibtex',
   -- Note: 'org' parser is installed by orgmode.nvim, not nvim-treesitter
 }
 
 return {
+  -- The official grammar mixes a C parser with a C++ external scanner, so build
+  -- the two objects explicitly before linking the parser for Linux or macOS.
+  {
+    'nvim-neorg/tree-sitter-norg',
+    build = function(plugin)
+      local src = plugin.dir .. '/src'
+      local build_dir = vim.fn.tempname()
+      local parser_dir = vim.fn.stdpath('data') .. '/site/parser'
+      vim.fn.mkdir(build_dir, 'p')
+      vim.fn.mkdir(parser_dir, 'p')
+
+      local function run(command)
+        local result = vim.system(command, { text = true }):wait()
+        assert(result.code == 0, result.stderr)
+      end
+
+      local parser_object = build_dir .. '/parser.o'
+      local scanner_object = build_dir .. '/scanner.o'
+      run({ 'cc', '-O2', '-fPIC', '-I', src, '-c', src .. '/parser.c', '-o', parser_object })
+      run({ 'c++', '-O2', '-fPIC', '-I', src, '-c', src .. '/scanner.cc', '-o', scanner_object })
+      run({
+        'c++', vim.fn.has('mac') == 1 and '-dynamiclib' or '-shared',
+        parser_object, scanner_object, '-o', parser_dir .. '/norg.so',
+      })
+      vim.fn.delete(build_dir, 'rf')
+    end,
+  },
+
   {
     'nvim-treesitter/nvim-treesitter',
     branch = 'main',
     build = ':TSUpdate',
     lazy = false, -- main branch registers no lazy-loadable modules; load eagerly
     config = function()
-      local function register_norg_parser()
-        require('nvim-treesitter.parsers').norg = {
-          install_info = {
-            url = 'https://github.com/nvim-neorg/tree-sitter-norg',
-            revision = 'd7edfaf89198aab652c7a1f0f818196efedaccfb',
-          },
-          maintainers = { 'nvim-neorg' },
-          tier = 3,
-        }
-      end
-      vim.api.nvim_create_autocmd('User', {
-        group = vim.api.nvim_create_augroup('treesitter_custom_parsers', { clear = true }),
-        pattern = 'TSUpdate',
-        callback = register_norg_parser,
-      })
-      register_norg_parser()
       require('nvim-treesitter').install(ensure_installed)
 
       vim.api.nvim_create_autocmd('FileType', {
