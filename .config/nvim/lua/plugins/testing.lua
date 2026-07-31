@@ -8,7 +8,7 @@ return {
       'nvim-treesitter/nvim-treesitter',
       -- Adapters:
       'olimorris/neotest-rspec',
-      'rouge8/neotest-rust',
+      'mrcjkb/rustaceanvim',
     },
     cmd = 'Neotest',
     config = function()
@@ -19,7 +19,7 @@ return {
               return { 'bundle', 'exec', 'rspec' }
             end,
           }),
-          require('neotest-rust'),
+          require('rustaceanvim.neotest'),
         },
       })
     end,
