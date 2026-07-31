@@ -114,10 +114,23 @@ return {
         },
       })
 
-      -- Ruby LSP — uses project Ruby via Bundler/asdf/chruby, NOT installed by mason.
-      -- Only enable in Ruby projects (where Gemfile or .ruby-version exists)
-      -- to avoid "ruby-lsp not found" errors in non-Ruby directories.
+      -- Ruby LSP uses asdf to select the project runtime. Ruby LSP manages its
+      -- composed bundle itself, so do not wrap the server with bundle exec. Clear
+      -- stale chruby variables before asdf selects the project runtime.
+      local ruby_lsp_cmd = {
+        'env',
+        '-u', 'GEM_HOME',
+        '-u', 'GEM_PATH',
+        '-u', 'GEM_ROOT',
+        '-u', 'RUBY_ROOT',
+        '-u', 'RUBY_ENGINE',
+        '-u', 'RUBY_VERSION',
+        'asdf', 'exec', 'ruby-lsp',
+      }
       vim.lsp.config('ruby_lsp', {
+        cmd = function(dispatchers, config)
+          return vim.lsp.rpc.start(ruby_lsp_cmd, dispatchers, { cwd = config.root_dir })
+        end,
         root_markers = { 'Gemfile', '.ruby-version', '.ruby-gemset' },
         workspace_required = true, -- don't start in single-file mode outside a project
         init_options = {

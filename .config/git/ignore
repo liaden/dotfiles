@@ -48,6 +48,8 @@ Thumbs.db
 
 **/.claude/settings.local.json
 
+.ruby-lsp/
+
 # Running WIP notes for the hipp Terraform tree (retirement triage,
 # drift logs). Operator-local; not part of git history.
 infra/terraform/.wip/
