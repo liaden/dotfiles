@@ -7,7 +7,7 @@
 -- vimdoc, c, query ship with nvim itself).
 local ensure_installed = {
   'ruby', 'rust', 'bash', 'json', 'yaml', 'toml', 'html', 'css',
-  'javascript', 'typescript', 'regex', 'diff', 'gitcommit', 'git_rebase',
+  'javascript', 'typescript', 'tsx', 'regex', 'scss', 'svelte', 'typst', 'vue', 'norg', 'diff', 'gitcommit', 'git_rebase',
   'dockerfile', 'terraform', 'sql', 'latex', 'bibtex',
   -- Note: 'org' parser is installed by orgmode.nvim, not nvim-treesitter
 }
@@ -19,6 +19,22 @@ return {
     build = ':TSUpdate',
     lazy = false, -- main branch registers no lazy-loadable modules; load eagerly
     config = function()
+      local function register_norg_parser()
+        require('nvim-treesitter.parsers').norg = {
+          install_info = {
+            url = 'https://github.com/nvim-neorg/tree-sitter-norg',
+            revision = 'd7edfaf89198aab652c7a1f0f818196efedaccfb',
+          },
+          maintainers = { 'nvim-neorg' },
+          tier = 3,
+        }
+      end
+      vim.api.nvim_create_autocmd('User', {
+        group = vim.api.nvim_create_augroup('treesitter_custom_parsers', { clear = true }),
+        pattern = 'TSUpdate',
+        callback = register_norg_parser,
+      })
+      register_norg_parser()
       require('nvim-treesitter').install(ensure_installed)
 
       vim.api.nvim_create_autocmd('FileType', {

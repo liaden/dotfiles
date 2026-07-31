@@ -1,11 +1,17 @@
 return {
   {
     'folke/snacks.nvim',
-    priority = 900,
+    priority = 1000,
     lazy = false,
     opts = {
       -- Picker (configured in finder.lua, Phase 10)
       picker = {},
+
+      bigfile = { enabled = true },
+      dashboard = { enabled = true },
+      explorer = { enabled = true },
+      scope = { enabled = true },
+      statuscolumn = { enabled = true },
 
       -- Toast notifications (replaces nvim-notify)
       notifier = { enabled = true },
