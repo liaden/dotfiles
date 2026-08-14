@@ -50,6 +50,7 @@ setopt HIST_FIND_NO_DUPS        # duplicates are still recorded but only one mat
 setopt HIST_NO_STORE            # remove 'history ...' commands from history
 setopt HIST_REDUCE_BLANKS       # cleanup whitespace
 setopt INC_APPEND_HISTORY_TIME  # add commands to history after command finishes rather than session end
+setopt HIST_FCNTL_LOCK          # kernel fcntl locks instead of zsh's lock-file dance; SHARE_HISTORY needs real locking
 
 export EDITOR=nvim
 export MANPAGER='nvim +Man!'
