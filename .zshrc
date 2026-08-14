@@ -88,3 +88,7 @@ export CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1
 # podman as docker drop-in replacement
 # alias docker=podman  # disabled — lima docker context
 # alias docker-compose="podman compose"  # disabled
+
+# >>> Codex installer >>>
+export PATH="$HOME/.local/bin:$PATH"
+# <<< Codex installer <<<
