@@ -1,5 +1,9 @@
 {
   "cleanupPeriodDays": 60,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(journalctl *)",
@@ -125,72 +129,89 @@
       "Bash(poweroff*)"
     ]
   },
-  "model": "us.anthropic.claude-opus-4-8",
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
-  "effortLevel": "high",
-  "showClearContextOnPlanAccept": true,
-  "skipWorkflowUsageWarning": true,
-  "workflowKeywordTriggerEnabled": false,
-  "statusLine": {
-    "type": "command",
-    "command": "bash ~/.claude/statusline-command.sh",
-    "refreshInterval": 10
-  },
+  "model": "opus[1m]",
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "~/bin/claude-session-hook SessionStart", "async": true }
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook SessionStart",
+            "async": true
+          }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "~/bin/claude-session-hook UserPromptSubmit", "async": true }
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook UserPromptSubmit",
+            "async": true
+          }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "~/bin/claude-session-hook Stop", "async": true }
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook Stop",
+            "async": true
+          }
         ]
       }
     ],
     "Notification": [
       {
         "hooks": [
-          { "type": "command", "command": "~/bin/claude-session-hook Notification", "async": true }
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook Notification",
+            "async": true
+          }
         ]
       }
     ],
     "SessionEnd": [
       {
         "hooks": [
-          { "type": "command", "command": "~/bin/claude-session-hook SessionEnd", "async": true }
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook SessionEnd",
+            "async": true
+          }
         ]
       }
     ]
+  },
+  "workflowKeywordTriggerEnabled": false,
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline-command.sh",
+    "refreshInterval": 10
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "clangd-lsp@claude-plugins-official": true
+    "clangd-lsp@claude-plugins-official": true,
+    "ruby-lsp@claude-plugins-official": true
   },
+  "effortLevel": "high",
   "awaySummaryEnabled": false,
+  "showClearContextOnPlanAccept": true,
   "tui": "fullscreen",
-  "theme": "dark-daltonized",
-  "editorMode": "vim",
-  "inputNeededNotifEnabled": false,
-  "useAutoModeDuringPlan": false,
   "voice": {
     "enabled": true,
     "mode": "hold"
   },
-  "preferredNotifChannel": "iterm2_with_bell"
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark-daltonized",
+  "editorMode": "vim",
+  "preferredNotifChannel": "iterm2_with_bell",
+  "inputNeededNotifEnabled": false,
+  "useAutoModeDuringPlan": false
 }
