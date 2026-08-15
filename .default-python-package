@@ -1,4 +1,5 @@
 pipenv
+poetry
 ipython
 neovim
 neovim-remote
