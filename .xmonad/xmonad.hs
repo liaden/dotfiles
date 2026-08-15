@@ -409,7 +409,7 @@ myStartupHook = do
   spawnOnce "exec ~/.xmonad/bin/bartoggle"
   spawnOnce "exec eww daemon"
   spawn "xsetroot -cursor_name left_ptr"
-  spawn "exec ~/.xmonad/bin/lock.sh"
+  spawnOnce "exec ~/.xmonad/bin/lock.sh"
   spawnOnce "exec ~/.xmonad/bin/wallpapers.sh"
   spawnOnce "picom -f"
   spawnOnce "greenclip daemon"
