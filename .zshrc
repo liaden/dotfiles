@@ -26,7 +26,11 @@ fi
 # Must precede any zsh_cache_source caller below.
 source ~/.zsh/cache.zsh
 
+# Both are sourced, and each is a no-op where its binary is absent, so a box
+# self-selects: Linux has mise and no asdf, the mac still has asdf. mise comes
+# second so it wins PATH precedence anywhere both are installed.
 source ~/.zsh/asdf.zsh
+source ~/.zsh/mise.zsh
 
 # vim cli settings
 source ~/.zsh/vim.zsh
