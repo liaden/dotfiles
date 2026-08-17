@@ -43,12 +43,25 @@ disabled = false
 format = "[ $symbol ](fg:0 bg:7)"
 
 [os.symbols]
+# Every entry here must be a Nerd Font glyph, never a starship default.
+# The built-in symbols are emoji, and an emoji breaks [fill]: starship measures
+# the prompt with unicode-width, which scores U+FE0F (VARIATION SELECTOR-16) as
+# 0 and the base codepoint as 1, while the terminal honours VS16 and draws two
+# cells. [fill] then pads to one column too many, so the last character of the
+# right-hand side wraps onto a line of its own.
+#
+# Arch is what this bit: its default is U+1F397 + U+FE0F, so a prompt starship
+# measured at 100 columns rendered as 101. Macos and Ubuntu were already
+# overridden below, which is why only Arch showed it. U+F303 is
+# nf-linux-archlinux -- flat and single-width like the rest of the prompt.
 # Without an explicit Macos entry starship falls back to its default emoji
 # apple, which is not in the Nerd Font and so renders via Apple Color Emoji --
 # double-width and full colour in a prompt that is otherwise flat palette
 # indices. This is nf-md-apple (U+F0035), from the Material Design range.
 Macos = "󰀵"
 Ubuntu = ""
+Arch = ""
+Debian = ""
 Linux = ""
 
 [directory]
