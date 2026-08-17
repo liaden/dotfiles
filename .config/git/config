@@ -1,5 +1,23 @@
 [core]
     editor = nvim
+    # Guarded rather than a bare `delta`: this file is shared with boxes that
+    # have not been through setup/linux yet, and an unresolvable core.pager
+    # turns every `git diff` into a "command not found" instead of falling
+    # back. git hands the value to `sh -c`, so the test is free to be a
+    # shell expression. Arch calls the package git-delta, the binary delta.
+    pager = command -v delta >/dev/null 2>&1 && delta || less
+
+[interactive]
+    diffFilter = command -v delta >/dev/null 2>&1 && delta --color-only || cat
+
+[delta]
+    navigate = true              # n / N to move between diff hunks
+    line-numbers = true
+    hyperlinks = true
+
+[merge]
+    # delta renders the 3-way form; zdiff3 keeps the common ancestor visible.
+    conflictStyle = zdiff3
 
 [log]
   follow = true
