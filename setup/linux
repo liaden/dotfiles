@@ -118,7 +118,10 @@ mise install
 
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SETUP_DIR/neovim.sh"
-[ -d "$HOME/.tmux/plugins/tpm" ] && "$HOME/.tmux/plugins/tpm/bin/install_plugins"
+# tpm lives under ~/.config/tmux, not the legacy ~/.tmux -- tmux.conf clones it
+# there and nothing creates the old path any more.
+TPM="$HOME/.config/tmux/plugins/tpm"
+[ -x "$TPM/bin/install_plugins" ] && "$TPM/bin/install_plugins"
 
 "$SETUP_DIR/rust"
 
