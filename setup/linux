@@ -1,78 +1,158 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-sudo apt-get update
-sudo apt-get install -y git
+# Bootstrap for a fresh Linux box. Arch and Debian differ enough that the
+# package layer is a per-distro shim; everything after it is shared.
+#
+# The split is deliberate rather than "brew everywhere". On Debian the archive
+# is old enough that Homebrew is doing real work -- neovim, gh, delta, bat, fzf
+# and mise are all behind there. Arch already ships every one of them current,
+# and linuxbrew on Arch duplicates the toolchain and fights the system linker
+# for no benefit, so Arch takes nothing from brew.
 
-# brew wants a confirmation before continuing
-echo -ne '\n' | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+# --- distro detection ------------------------------------------------------
 
-sudo apt-get install -y software-properties-common
-sudo apt-get update
-sudo apt-get install -y ctop tmux direnv
+# ID_LIKE is what makes this hold for the derivatives: Manjaro/EndeavourOS
+# report ID_LIKE=arch, Ubuntu/Pop!_OS/Mint report ID_LIKE=debian.
+detect_distro() {
+  [ -r /etc/os-release ] || { echo "no /etc/os-release; unsupported" >&2; exit 1; }
+  # shellcheck disable=SC1091
+  . /etc/os-release
 
-mkdir ~/.zsh
-git clone https://github.com/tarjoilija/zgen.git "${HOME}/.zgen"
+  case " $ID ${ID_LIKE:-} " in
+    *" arch "*)             echo arch ;;
+    *" debian "*|*" ubuntu "*) echo debian ;;
+    *)
+      echo "unsupported distro: ${PRETTY_NAME:-$ID}" >&2
+      exit 1
+      ;;
+  esac
+}
 
-brew install git hub
-brew install neovim
-brew install asdf chruby ruby-install
-brew install fzf the_silver_searcher
-brew install jq direnv
-brew install universal-ctags
-$(brew --prefix fzf)/install
+DISTRO="$(detect_distro)"
+echo "==> detected $DISTRO"
 
-# asdf
+# --- package layer ---------------------------------------------------------
 
-asdf plugin add postgres
-asdf plugin add python
-asdf plugin add ruby https://github.com/asdf-vm/asdf-ruby.git
-asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
-bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring
+# Named the same on both sides so the shared section below never branches.
+# Where a package name differs, the difference is confined to these two
+# functions.
 
-# ruby-build doesn't auto-detect Homebrew's keg-only openssl on its own
-export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl)"
-asdf install
+install_arch() {
+  # less and man-db are listed explicitly: they come in via the `base` group on
+  # most installs but are not guaranteed, and a box without less has no git
+  # pager at all.
+  sudo pacman -Syu --needed --noconfirm \
+    base-devel git curl less man-db \
+    zsh tmux direnv \
+    neovim \
+    github-cli git-delta bat ripgrep fzf the_silver_searcher \
+    jq ctags ctop \
+    starship mise uv \
+    openssl libyaml libffi zlib gmp
+
+  # Arch's fzf package installs the key-bindings/completion scripts to
+  # /usr/share/fzf and expects the shell rc to source them -- there is no
+  # $(brew --prefix fzf)/install equivalent to run.
+}
+
+install_debian() {
+  sudo apt-get update
+  sudo apt-get install -y software-properties-common
+  sudo apt-get install -y \
+    build-essential git curl procps file \
+    zsh tmux direnv ctop \
+    libssl-dev libyaml-dev libffi-dev zlib1g-dev libgmp-dev
+
+  # brew wants a confirmation before continuing
+  if ! command -v brew >/dev/null 2>&1; then
+    echo -ne '\n' | /bin/bash -c \
+      "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+  # Everything Debian ships too old to be worth using. Taking bat and fd from
+  # brew rather than apt also avoids Debian's batcat/fdfind renames.
+  brew install git hub gh git-delta bat
+  brew install neovim
+  brew install fzf ripgrep the_silver_searcher
+  brew install jq direnv universal-ctags
+  brew install starship mise uv
+  "$(brew --prefix fzf)/install" --all
+}
+
+"install_$DISTRO"
+
+# --- shared ----------------------------------------------------------------
+
+# zsh plugin manager
+[ -d "$HOME/.zgen" ] || git clone https://github.com/tarjoilija/zgen.git "$HOME/.zgen"
+mkdir -p "$HOME/.zsh"
+
+# --- language runtimes (mise) ----------------------------------------------
+
+# mise replaces asdf here. Beyond being maintained, it is the only reason the
+# ruby situation is tolerable: distro ruby is always behind upstream -- Arch
+# sits on 3.4.x and Debian further back still, while ruby-lang is on 4.0.x --
+# and ruby is the runtime most likely to be in use, so it cannot come from the
+# package manager. mise builds it from source instead.
+#
+# ~/.tool-versions is read as-is (mise is asdf-compatible), as are the
+# ~/.default-gems / ~/.default-npm-packages lists.
+#
+# The build deps installed above are what ruby-build needs; without libyaml in
+# particular the psych extension silently does not build and bundler breaks.
+#
+# ~/.tool-versions stays the single source of truth for versions, exact rather
+# than fuzzy, because the mac still resolves it with asdf and asdf cannot parse
+# a bare "4". Bump ruby there and re-run `mise install`; `mise outdated` lists
+# what has moved.
+mise trust "$HOME/.tool-versions" 2>/dev/null || true
+mise install
 
 # vim/tmux plugin install
 
-./setup/neovim.sh
-~/.tmux/plugins/tpm/bin/install_plugins
+SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SETUP_DIR/neovim.sh"
+[ -d "$HOME/.tmux/plugins/tpm" ] && "$HOME/.tmux/plugins/tpm/bin/install_plugins"
 
-setup/rust
+"$SETUP_DIR/rust"
 
-brew install zsh && chsh -s "$(which zsh)"
+[ "$SHELL" = "$(command -v zsh)" ] || chsh -s "$(command -v zsh)"
+
+# ssh-agent: one agent per login session, started with the session rather than
+# lazily on first use. Arch's ssh-agent.service has no WantedBy of its own (its
+# [Install] only pulls in the socket, which gives you socket activation), so
+# `enable` alone leaves it "indirect" -- add-wants is what actually starts it
+# at session start. ~/.config/shell/ssh-agent.sh points SSH_AUTH_SOCK at it.
+#
+# Debian has no packaged user unit for this; there the desktop session's
+# keyring agent already provides SSH_AUTH_SOCK and ssh-agent.sh defers to it.
+if systemctl --user list-unit-files ssh-agent.service >/dev/null 2>&1; then
+  systemctl --user enable --now ssh-agent.socket
+  systemctl --user add-wants default.target ssh-agent.service
+  systemctl --user start ssh-agent.service
+fi
 
 # morning-update runs off launchd on the mac; systemd --user is the equivalent
 # here. Units ship with the dotfiles, so this only has to enable them.
 # systemd opens the log file before ExecStart, so the dir must already exist.
-mkdir -p ~/.local/state/morning-update
+mkdir -p "$HOME/.local/state/morning-update"
 systemctl --user daemon-reload
 systemctl --user enable --now morning-update.timer
 
 # mempalace-refresh re-mines the local repos + Claude transcripts into the memory
 # palace. Its refresh.sh ships with the dotfiles (which also creates ~/.mempalace,
-# where the unit appends its log). Needs the mempalace CLI on PATH: uv tool install
-# mempalace. Linux-only — nothing enables this on the mac.
+# where the unit appends its log). Linux-only -- nothing enables this on the mac.
+#
+# The CLI install used to be a comment here telling you to run it yourself,
+# which is exactly how the timer ended up enabled while `mempalace` was not on
+# PATH -- every hourly run logged "command not found" and the palace silently
+# went stale. It is a real step now.
+#
+# The [extract] extra is what pulls the PDF/document readers the extract-mode
+# mines need. Reinstalling is cheap and idempotent, and it repairs the case
+# where the tool env is recorded but broken (uv pins absolute paths in its
+# receipts, so a home-directory rename orphans every installed tool).
+uv tool install "mempalace[extract]" --reinstall
 systemctl --user enable --now mempalace-refresh.timer
-
-function configure_user() {
-  echo "Coniguring user $1"
-  sudo -E su "$1"
-  pushd ~
-
-  #cp -r "$DOTFILES_PATH"/.config ~
-  #cp -r "$DOTFILES_PATH"/.tmux ~
-  #cp    "$DOTFILES_PATH"/.zshrc ~
-  #cp    "$DOTFILES_PATH"/.zsh_plugins ~
-  #cp    "$DOTFILES_PATH"/.zsh/ag_helpers ~/.zsh
-  #cp    "$DOTFILES_PATH"/.tmux.conf ~
-  #cp    "$DOTFILES_PATH"/.gitignore_global ~
-  #cp    "$DOTFILES_PATH"/.gitconfig ~
-  #cp    "$DOTFILES_PATH"/.bash_login ~
-  #cp    "$DOTFILES_PATH"/.pryrc ~
-
-
-  popd
-  exit
-}
