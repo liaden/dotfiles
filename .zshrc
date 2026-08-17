@@ -32,6 +32,10 @@ source ~/.zsh/cache.zsh
 source ~/.zsh/asdf.zsh
 source ~/.zsh/mise.zsh
 
+# Socket-activated ssh-agent (systemd on Linux, launchd on the mac); no-ops if
+# SSH_AUTH_SOCK is already set, e.g. under agent forwarding.
+[ -f "$HOME/.config/shell/ssh-agent.sh" ] && . "$HOME/.config/shell/ssh-agent.sh"
+
 # vim cli settings
 source ~/.zsh/vim.zsh
 
