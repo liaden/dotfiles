@@ -41,9 +41,10 @@ echo "==> detected $DISTRO"
 install_arch() {
   # less and man-db are listed explicitly: they come in via the `base` group on
   # most installs but are not guaranteed, and a box without less has no git
-  # pager at all.
+  # pager at all. One `clang` package covers clangd and clang-format too, where
+  # Debian splits those out.
   sudo pacman -Syu --needed --noconfirm \
-    base-devel git curl less man-db \
+    base-devel clang git curl less man-db \
     zsh tmux direnv \
     neovim \
     github-cli git-delta bat ripgrep fzf the_silver_searcher \
@@ -59,8 +60,11 @@ install_arch() {
 install_debian() {
   sudo apt-get update
   sudo apt-get install -y software-properties-common
+  # clangd and clang-format are separate packages here, unlike Arch's single
+  # clang. These are the unversioned metapackages, which track the archive's
+  # default LLVM rather than pinning a release.
   sudo apt-get install -y \
-    build-essential git curl procps file \
+    build-essential clang clangd clang-format git curl procps file \
     zsh tmux direnv ctop \
     libssl-dev libyaml-dev libffi-dev zlib1g-dev libgmp-dev
 
