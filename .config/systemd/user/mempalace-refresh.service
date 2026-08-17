@@ -1,7 +1,13 @@
 [Unit]
 Description=MemPalace freshness refresh (incremental re-mine of repos + Claude chats)
-After=homebrew.ollama.service
-Wants=homebrew.ollama.service
+# ollama is optional: embeddings come from the local minilm model, and only the
+# LLM-backed extras talk to ollama. Both names are listed because the unit is
+# packaged differently per distro -- linuxbrew installs it as
+# homebrew.ollama.service, Arch's package as plain ollama.service. A name that
+# resolves to nothing is a non-fatal warning in Wants=, so whichever one is
+# absent on a given box costs a log line and nothing else.
+After=ollama.service homebrew.ollama.service
+Wants=ollama.service homebrew.ollama.service
 
 [Service]
 Type=oneshot
