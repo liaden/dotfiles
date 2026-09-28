@@ -162,10 +162,22 @@ VirtualBox VMs
 .pki
 .webdrivers
 .atuin
-.claude*
+.claude.json*
 .claude/*
 !.claude/settings.json
 !.claude/statusline-command.sh
+!.claude/CLAUDE.md
+!.claude/agents/
+!.claude/reference/
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/create-plan/
+!.claude/skills/execute-plan/
+!.claude/skills/critique/
+!.claude/skills/research/
+!.claude/skills/handoff/
+!.claude/skills/research-corpus/
+__pycache__/
 
 # mempalace (no XDG support; state only, refresh.sh is authored)
 .mempalace/*

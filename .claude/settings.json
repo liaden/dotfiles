@@ -110,7 +110,12 @@
       "mcp__claude_ai_Linear__list_issues",
       "mcp__claude_ai_Linear__get_issue",
       "mcp__linear-server__list_issues",
-      "mcp__linear-server__get_issue"
+      "mcp__linear-server__get_issue",
+      "Bash(mempalace search *)",
+      "Bash(mempalace wake-up *)",
+      "Bash(mempalace status)",
+      "Read(~/.claude/reference/**)",
+      "Bash(echo * >> ~/.claude/friction/*)"
     ],
     "deny": [
       "Bash(rm -rf /)",
