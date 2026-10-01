@@ -13,7 +13,7 @@ alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 config checkout
 
 # zsh plugin manager
-git clone https://github.com/tarjoilija/zgen.git "${HOME}/.zgen"
+git clone https://github.com/jandamm/zgenom.git "${HOME}/.zgenom"
 
 brew install zsh bash pdsh gpg
 brew install direnv
@@ -45,7 +45,7 @@ bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring
 export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl)"
 asdf install
 
-nvim +PlugInstall +qall
+nvim --headless "+Lazy! sync" +qa
 
 # shipping automation: auto-dev (nightly PR pipeline, hopper, briefs) + the
 # morning-feed notification hub. Needs `gh auth login` and claude installed/
