@@ -46,7 +46,8 @@ install_arch() {
   sudo pacman -Syu --needed --noconfirm \
     base-devel clang git curl less man-db \
     zsh tmux direnv \
-    neovim \
+    neovim stylua selene \
+    alacritty \
     github-cli git-delta bat ripgrep fzf the_silver_searcher \
     jq ctags ctop \
     starship mise uv \
@@ -90,7 +91,7 @@ install_debian() {
 # --- shared ----------------------------------------------------------------
 
 # zsh plugin manager
-[ -d "$HOME/.zgen" ] || git clone https://github.com/tarjoilija/zgen.git "$HOME/.zgen"
+[ -d "$HOME/.zgenom" ] || git clone https://github.com/jandamm/zgenom.git "$HOME/.zgenom"
 mkdir -p "$HOME/.zsh"
 
 # --- language runtimes (mise) ----------------------------------------------
@@ -117,7 +118,8 @@ mise install
 # vim/tmux plugin install
 
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-"$SETUP_DIR/neovim.sh"
+# mason installs the language servers itself once lazy.nvim has the plugins.
+nvim --headless "+Lazy! sync" +qa
 # tpm lives under ~/.config/tmux, not the legacy ~/.tmux -- tmux.conf clones it
 # there and nothing creates the old path any more.
 TPM="$HOME/.config/tmux/plugins/tpm"
