@@ -5,7 +5,9 @@ function win_setup() {
 }
 
 function mac_setup() {
-  /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  # Apple Silicon installs to /opt/homebrew, which is not on PATH yet.
+  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
   brew update && brew install bash
 
   ./setup/mac

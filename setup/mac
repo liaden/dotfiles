@@ -2,7 +2,10 @@
 
 # init
 xcode-select --install
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+if ! command -v brew >/dev/null 2>&1; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
+fi
 
 brew install git
 
@@ -21,7 +24,7 @@ brew install tmux reattach-to-user-namespace
 brew install hub tig gh
 brew install fzf
 brew install chruby ruby-install
-brew install neovim/neovim/neovim
+brew install neovim
 brew install ctop htop glances
 brew install the_silver_searcher
 brew install xz
@@ -29,9 +32,9 @@ brew install wget jq lynx
 brew install gnu-tar gnu-sed
 brew install shellcheck yamllint kubeval
 brew install fd
-brew install asdf rbenv ruby-build
+brew install asdf ruby-build
 brew install openssl libyaml libffi       # ruby-build recommended
-brew install homebrew/cask-fonts/font-ubuntu-mono-derivative-powerline
+brew install --cask font-ubuntu-mono-derivative-powerline
 brew install universal-ctags
 
 asdf plugin add postgres
