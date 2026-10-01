@@ -345,7 +345,6 @@ myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+
     [ isInProperty "_NET_WM_WINDOW_TYPE" "_NET_WM_WINDOW_TYPE_POPUP_MENU" --> doIgnore
     , isInProperty "_NET_WM_WINDOW_TYPE" "_NET_WM_WINDOW_TYPE_MENU"       --> doIgnore
     , className =? "MPlayer"        --> doFloat
-    , className =? "Gimp"           --> doFloat
     , resource  =? "desktop_window" --> doIgnore
     , resource  =? "kdesktop"       --> doIgnore
     , isFullscreen --> doFullFloat
