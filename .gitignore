@@ -177,6 +177,7 @@ VirtualBox VMs
 !.claude/skills/research/
 !.claude/skills/handoff/
 !.claude/skills/research-corpus/
+!.claude/skills/manual-qa/
 __pycache__/
 
 # mempalace (no XDG support; state only, refresh.sh is authored)
