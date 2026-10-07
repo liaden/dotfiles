@@ -1,7 +1,7 @@
 ---
 name: spike
 description: Writes throwaway code to answer 1 question about a library, an API, or a performance limit. Use when a plan or a research option rests on an unverified assumption.
-model: inherit
+model: sonnet
 tools: Read, Edit, Write, Grep, Glob, Bash, WebFetch, WebSearch
 ---
 

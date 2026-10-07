@@ -10,9 +10,20 @@
   uncommitted work, because hooks that stash unstaged changes test the staged tree
   alone.
 - Never put 2 cards' files in 1 commit.
-- New specs and the code they test land in the same commit.
+- Commit a card whole: code, specs, and new files together. A split leaves the card's
+  untracked files on disk under a hook that stashes, and the first commit goes red.
+- Never write a tracked file in the main checkout while a hook runs. The hook rolls it
+  back. Write to scratch and copy between landings.
 - If a hook fails, the files stay staged. Run `git reset` before the next `git add`.
 - Rebase and fast-forward merge run no hooks. Run the full suite after either.
+- Message hooks run after the hooks that run the suite. Check the message against the
+  repo's message rules before `git commit`. A message failure after a green suite costs
+  a full rerun, and `--no-verify` is denied in auto mode.
+- Keep every hook's output in a log named by card and attempt. A passing hook prints
+  nothing, so the suite's example count comes from the log.
+- Record `git status --porcelain` before and after each commit attempt. A hook that
+  reports modified files does not name them.
+- Retry a landing only when `$BASE` moved under it. Never on a red hook.
 - Commit messages follow `~/.claude/reference/coding.md`. That covers commits that
   update the plan document too.
 
@@ -35,6 +46,8 @@ git -C tmp/worktrees/<card> log -1 --format=%h          # must equal HEAD
   resolved earlier.
 - Spawn the agent without `isolation`. The first line of its brief names the absolute
   worktree path as the only directory it may touch.
+- Worktrees share the stash stack and, by default, `TMPDIR`. Agents never stash. Give
+  each worktree its own `TMPDIR` if tests write there.
 
 If an agent reports that a file the plan cites is missing, or that line numbers are
 wrong throughout, suspect a stale base before plan drift. To correct it:
@@ -49,8 +62,18 @@ Then tell the agent with SendMessage that its base was wrong and it must re-read
 ## orchestrator-commits (default)
 
 Agents never run git. They hand back changed files and wiring diffs. The main session
-copies the card's files into the main checkout, applies the wiring to shared files,
-runs the full suite, and commits on `$BASE`.
+applies the wiring to the shared files in the card's worktree before review. After
+approval it copies the card's files into the main checkout, applies the same wiring
+there, runs the full suite, and commits on `$BASE`. If a shared file changed on `$BASE`
+since the review, check the wiring still applies as reviewed.
+
+Before copying a file, check whether it changed on `$BASE` since the worktree was cut.
+If it did, a whole-file copy reverts that change. Apply the card's diff as a patch
+instead:
+
+```bash
+git diff <cut sha> card/<card> -- <file> | git apply -3
+```
 
 ## branch-queue
 

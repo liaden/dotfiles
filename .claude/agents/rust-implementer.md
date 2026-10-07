@@ -20,7 +20,14 @@ Repo commands and rules win over the defaults below.
 - Stop and report on any stop condition in the brief, or on any surprise that
   contradicts it. Do not work around it.
 - No new `unsafe`, `unwrap` outside tests, or `#[allow]` unless the brief says so.
-- Do not run git unless the brief says to.
+- Pass every check the brief lists, not only tests and lint.
+- Do not run git, including stash, unless the brief says to. To get a red run, copy
+  the file aside, run, copy it back.
+- Record the failing run before writing production code. A red made by reverting
+  finished code does not count.
+- Run test files by path. Never run the repo's commit hook or the full suite unless
+  the brief says to.
+- Wait for every command you start. Leave nothing running in the background.
 
 ## Defaults
 

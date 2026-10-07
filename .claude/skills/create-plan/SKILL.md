@@ -19,6 +19,10 @@ decisions (`~/.claude/reference/mempalace.md`). Send parallel Explore agents to 
 every file the work touches: current behavior, code worth reusing, and the specs that
 pin it. List where docs and code disagree.
 
+Ask Explore agents what the production path does, never for the smallest fix. Recheck
+any claim that nothing exists with a grep of your own. Read-only agents return findings
+as messages; do not ask them to write files.
+
 ## 2. Settle backwards compatibility
 
 1. List the surfaces the plan touches: public APIs, CLI flags, config files, stored
@@ -50,6 +54,9 @@ Record every verdict in the plan's Compatibility section.
 Use AskUserQuestion only for what code and files cannot answer: policy, scope, taste,
 and where the plan should live if the repo has no planning location. If the language
 has no roster in `~/.claude/reference/rosters.md`, propose one and confirm it.
+
+1 decision per question. When the answer turns on a distinction, state it in the
+option text.
 
 ## 4. Design
 
@@ -88,6 +95,6 @@ BLOCKERs and substantive SHOULD-FIXes, then list what the panel changed.
 
 Read `~/.claude/reference/writing-style.md`. Fill `references/plan-template.md`.
 Include code snippets for new interfaces and mermaid diagrams for flow or structure.
-Save to the repo's planning location (`planning/specs/<slug>.md` in lain), add 1 line
-to the repo's roadmap or index, and tell the user the plan runs with
+Save to the planning location the repo `CLAUDE.md` names, add 1 line to the repo's
+roadmap or index, commit both, and tell the user the plan runs with
 `/execute-plan <path>`.
