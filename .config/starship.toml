@@ -22,13 +22,13 @@ $directory\
 ${custom.dir_close}\
 ([](fg:4 bg:3)$git_branch$git_status[ ](bg:3)[](fg:3))\
 $fill\
+[](fg:8)\
 $status\
 $jobs\
 $direnv\
 $nodejs$ruby$python$golang$rust\
-([](fg:0)$username$hostname)\
+($username$hostname[ ](bg:8)[](fg:0 bg:8))\
 $cmd_duration\
-${custom.time_cap}\
 $time\
 $line_break\
 $character"""
@@ -95,10 +95,10 @@ staged = " +${count}"
 modified = " !${count}"
 untracked = " ?${count}"       # = VCS_UNTRACKED_ICON '?'
 
-# Right-side segments each carry their own head cap and no tail, ending
-# flush at the next segment or the terminal edge. The cap sits on the
-# default bg (p10k drew it on the left neighbour's bg) because no module
-# knows which neighbour is currently visible.
+# Right-side segments share one background (bg:8) and are separated by a thin
+#  divider they each carry as a tail. A module that does not render takes its
+# divider with it, and $time always renders, so no divider is ever orphaned.
+# The single hard cap lives in `format` after $fill, not on any module.
 
 # p10k: STATUS_OK=false (silent on success) and STATUS_ERROR=false, but
 # ERROR_SIGNAL/ERROR_PIPE=true — so only signals and pipe failures surface.
@@ -110,74 +110,74 @@ not_executable_symbol = "✘"
 not_found_symbol = "✘"
 sigint_symbol = "✘"
 signal_symbol = "✘"
-style = "fg:0 bg:7"
-format = "([](fg:7)[ $symbol$signal_name ]($style))"
+style = "fg:1 bg:8"
+format = "([ $symbol$signal_name ]($style)[](fg:0 bg:8))"
 pipestatus_segment_format = "$status"
-pipestatus_format = "([](fg:7)[ $pipestatus ]($style))"
+pipestatus_format = "([ $pipestatus ]($style)[](fg:0 bg:8))"
 map_symbol = true
 pipestatus = true
 
 [cmd_duration]
 min_time = 3_000               # ms — p10k THRESHOLD=3 was SECONDS
 show_milliseconds = false
-style = "fg:0 bg:3"
-format = "[](fg:3)[ $duration ]($style)[](fg:7 bg:3)"
+style = "fg:3 bg:8"
+format = "[ $duration ]($style)[](fg:0 bg:8)"
 
 [jobs]
-style = "fg:0 bg:7"
-format = "[](fg:7)[ $symbol$number ]($style)"
+style = "fg:7 bg:8"
+format = "[ $symbol$number ]($style)[](fg:0 bg:8)"
 
 [direnv]
 disabled = false
-style = "fg:3 bg:0"
-format = "[](fg:0)[ $symbol$loaded ]($style)"
+style = "fg:3 bg:8"
+format = "[ $symbol$loaded ]($style)[](fg:0 bg:8)"
 symbol = " "
 
 # p10k's asdf segment has no starship equivalent; the per-language modules read
 # .tool-versions. ASDF_PROMPT_ALWAYS_SHOW=false, so these stay near-silent.
 [nodejs]
 symbol = " "
-style = "fg:2"
-format = "([ $symbol$version ]($style))"
+style = "fg:2 bg:8"
+format = "([ $symbol$version ]($style)[](fg:0 bg:8))"
 
 [ruby]
 symbol = " "
-style = "fg:1"
-format = "([ $symbol$version ]($style))"
+style = "fg:1 bg:8"
+format = "([ $symbol$version ]($style)[](fg:0 bg:8))"
 
 [python]
 symbol = " "
-style = "fg:4"
-format = "([ $symbol$version ]($style))"
+style = "fg:4 bg:8"
+format = "([ $symbol$version ]($style)[](fg:0 bg:8))"
 
 [golang]
 symbol = " "
-style = "fg:4"
-format = "([ $symbol$version ]($style))"
+style = "fg:4 bg:8"
+format = "([ $symbol$version ]($style)[](fg:0 bg:8))"
 
 [rust]
 symbol = " "
-style = "fg:208"
-format = "([ $symbol$version ]($style))"
+style = "fg:208 bg:8"
+format = "([ $symbol$version ]($style)[](fg:0 bg:8))"
 
 # = CONTEXT_TEMPLATE '%n@%m'
 [username]
 disabled = false
 show_always = false            # p10k only showed context when notable
-style_user = "fg:3 bg:0"
-style_root = "fg:1 bg:0"
-format = "[ $user ]($style)"
+style_user = "fg:3 bg:8"
+style_root = "fg:1 bg:8"
+format = "[ $user]($style)"
 
 [hostname]
 disabled = false
 ssh_only = true
-style = "fg:3 bg:0"
-format = "[@$hostname ]($style)"
+style = "fg:3 bg:8"
+format = "[@$hostname]($style)"
 
 [time]
 disabled = false
 time_format = "%I:%M:%S %p"    # = TIME_FORMAT '%D{%I:%M:%S %p}' (12h)
-style = "fg:0 bg:7"
+style = "fg:7 bg:8"
 format = "[ $time  ]($style)"
 
 [character]
@@ -191,11 +191,3 @@ vicmd_symbol = "[❮](bold fg:2)"
 when = '! git rev-parse --is-inside-work-tree 2>/dev/null'
 command = ''
 format = "[](fg:4)"
-
-# Time's head cap belongs to cmd_duration when that renders (drawn on bg:3);
-# this draws the plain-bg cap otherwise. Needs STARSHIP_DURATION exported by
-# the precmd hook in ~/.zshrc; 3000 mirrors cmd_duration.min_time.
-[custom.time_cap]
-when = 'test "${STARSHIP_DURATION:-0}" -lt 3000'
-command = ''
-format = "[](fg:7)"
