@@ -54,13 +54,25 @@ mine_extract() {
     mine "$dir" --mode extract --wing "$wing" --agent joel
 }
 
+mode="${1:-main}"
+
+# lain runs as its own unit so its memory cap and timeout do not gate the other wings.
+if [ "$mode" = lain ]; then
+  log "=== refresh lain start ==="
+  mine_projects lain lain
+  log "=== refresh lain done ==="
+  exit 0
+fi
+
+# The palace takes a single global lock, so a main run during a lain run would only fail.
+if systemctl --user is-active -q mempalace-refresh-lain.service; then
+  log "skip main refresh (lain run active)"
+  exit 0
+fi
+
 log "=== refresh start ==="
 
-# Ordered cheapest-first, with lain LAST. The palace takes a single global lock, so
-# these run strictly in sequence and any failure aborts the rest of the cycle. lain
-# walks ~59k files (vs 1.1k tracked) and was OOM-killed mid-mine on 2026-07-29 at a
-# 4.9 GB peak — which silently starved every project after it, leaving the palace
-# stale from 2026-07-22. Running it last means a lain failure costs only lain.
+# Ordered cheapest-first. Any failure here is logged and the cycle continues.
 mine_projects junk-drawer   junk-drawer
 mine_projects pigmentarium  pigmentarium
 mine_projects belle-curves  belle-curves
@@ -74,8 +86,5 @@ if [ -d "$HOME/.claude/projects" ]; then
   run_mine "Files processed|already filed|Drawers filed" \
     mine "$HOME/.claude/projects" --mode convos --wing claude-chats --agent joel
 fi
-
-# lain last — see note above.
-mine_projects lain          lain
 
 log "=== refresh done ==="

@@ -1,0 +1,13 @@
+[Unit]
+Description=MemPalace refresh of the lain wing (started by mempalace-refresh.service)
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+MemoryMax=11G
+MemorySwapMax=0
+TimeoutStartSec=20h
+ExecStart=%h/.mempalace/refresh.sh lain
+StandardOutput=append:%h/.mempalace/refresh.log
+StandardError=append:%h/.mempalace/refresh.log

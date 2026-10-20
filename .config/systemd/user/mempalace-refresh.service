@@ -8,11 +8,18 @@ Description=MemPalace freshness refresh (incremental re-mine of repos + Claude c
 # absent on a given box costs a log line and nothing else.
 After=ollama.service homebrew.ollama.service
 Wants=ollama.service homebrew.ollama.service
+# lain is 59k files and was OOM-killed repeatedly, so it runs after main in its own unit.
+OnSuccess=mempalace-refresh-lain.service
+OnFailure=mempalace-refresh-lain.service
 
 [Service]
 Type=oneshot
 Nice=10
 IOSchedulingClass=idle
+# Fail fast: a swap-thrashing run is worse than a killed one, and the timer retries.
+MemoryMax=12G
+MemorySwapMax=0
+TimeoutStartSec=6h
 ExecStart=%h/.mempalace/refresh.sh
 StandardOutput=append:%h/.mempalace/refresh.log
 StandardError=append:%h/.mempalace/refresh.log
