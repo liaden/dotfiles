@@ -49,7 +49,7 @@ install_arch() {
     neovim stylua selene \
     alacritty \
     github-cli git-delta bat ripgrep fzf the_silver_searcher \
-    jq ctags ctop \
+    jq ctags \
     starship mise uv \
     openssl libyaml libffi zlib gmp
 
@@ -66,7 +66,7 @@ install_debian() {
   # default LLVM rather than pinning a release.
   sudo apt-get install -y \
     build-essential clang clangd clang-format git curl procps file \
-    zsh tmux direnv ctop \
+    zsh tmux direnv \
     libssl-dev libyaml-dev libffi-dev zlib1g-dev libgmp-dev
 
   # brew wants a confirmation before continuing
@@ -78,7 +78,7 @@ install_debian() {
 
   # Everything Debian ships too old to be worth using. Taking bat and fd from
   # brew rather than apt also avoids Debian's batcat/fdfind renames.
-  brew install git hub gh git-delta bat
+  brew install git gh git-delta bat
   brew install neovim
   brew install fzf ripgrep the_silver_searcher
   brew install jq direnv universal-ctags
