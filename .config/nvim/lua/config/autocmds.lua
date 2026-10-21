@@ -92,15 +92,20 @@ autocmd('VimEnter', {
 -- with the same stale-socket reclaim -- and is versioned with the gem that
 -- attaches to it. Two copies of one wire convention is one copy too many.
 
--- Detect bare git repo for dotfiles fugitive integration
+-- Buffer-local, not $GIT_DIR/$GIT_WORK_TREE: env vars leak into every git child
+-- process (orgmode's grammar clone, lazy.nvim) and point them at ~. Fugitive gets
+-- the work tree from core.worktree in ~/.cfg/config.
 autocmd('BufEnter', {
   group = augroup('dotfiles_fugitive', { clear = true }),
-  callback = function()
+  callback = function(args)
     local home = vim.env.HOME
     local cfg_dir = home .. '/.cfg'
-    if vim.fn.getcwd() == home and vim.fn.isdirectory(cfg_dir) == 1 then
-      vim.env.GIT_DIR = cfg_dir
-      vim.env.GIT_WORK_TREE = home
+    if vim.fn.getcwd() ~= home or vim.fn.isdirectory(cfg_dir) == 0 then
+      return
     end
+    if (vim.b[args.buf].git_dir or '') ~= '' or vim.fs.root(args.buf, '.git') then
+      return
+    end
+    vim.b[args.buf].git_dir = cfg_dir
   end,
 })

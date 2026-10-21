@@ -14,6 +14,9 @@ rm "$HOME/.zshrc" # remove default zshrc from new macos version
 git clone --bare https://github.com/liaden/dotfiles "$HOME/.cfg"
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 config checkout
+# fugitive reads the work tree from here; nvim no longer exports GIT_WORK_TREE
+git --git-dir="$HOME/.cfg" config core.bare false
+git --git-dir="$HOME/.cfg" config core.worktree "$HOME"
 
 # zsh plugin manager
 git clone https://github.com/jandamm/zgenom.git "${HOME}/.zgenom"
