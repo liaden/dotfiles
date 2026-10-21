@@ -24,7 +24,7 @@ git clone https://github.com/jandamm/zgenom.git "${HOME}/.zgenom"
 brew install zsh bash gpg
 brew install direnv
 brew install tmux
-brew install tig gh
+brew install tig gh git-delta bat
 brew install fzf
 brew install chruby ruby-install
 brew install neovim
@@ -33,7 +33,7 @@ brew install the_silver_searcher
 brew install xz
 brew install wget jq
 brew install gnu-tar gnu-sed
-brew install shellcheck yamllint
+brew install shellcheck yamllint stylua selene uv
 brew install fd
 brew install asdf ruby-build
 brew install openssl libyaml libffi       # ruby-build recommended
