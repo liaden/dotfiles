@@ -163,5 +163,5 @@ systemctl --user enable --now morning-update.timer
 # mines need. Reinstalling is cheap and idempotent, and it repairs the case
 # where the tool env is recorded but broken (uv pins absolute paths in its
 # receipts, so a home-directory rename orphans every installed tool).
-uv tool install "mempalace[extract]" --reinstall
+uv tool install "mempalace[extract]" --reinstall --python 3.13
 systemctl --user enable --now mempalace-refresh.timer
