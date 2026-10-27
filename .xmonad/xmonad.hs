@@ -191,7 +191,7 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
         , Bind (modm,               xK_z     ) "Inhibit idle"         $ spawn "exec ~/.xmonad/bin/inhibit_activate"
         , Bind (modm .|. shiftMask, xK_z     ) "Allow idle"           $ spawn "exec ~/.xmonad/bin/inhibit_deactivate"
         , Bind (modm .|. shiftMask, xK_a     ) "Clipboard history"    $ spawn "exec ~/.xmonad/bin/clipboardy"
-        , Bind (modm,               xK_q     ) "Restart xmonad"       $ spawn "xmonad --recompile; xmonad --restart"
+        , Bind (modm,               xK_q     ) "Restart xmonad"       $ spawn "xmonad --recompile 2> /tmp/xmonad-build.log && xmonad --restart || notify-send -u critical 'xmonad build failed' \"$(tail -20 /tmp/xmonad-build.log)\""
         , Bind (modm .|. shiftMask, xK_q     ) "Power menu"           $ spawn "~/.config/rofi/scripts/powermenu.sh type-3 style-5"
         , Bind (modm .|. shiftMask, xK_slash ) "Key bindings"         $ showKeyHelp modm (myBindings conf)
         ])

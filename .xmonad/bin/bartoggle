@@ -11,6 +11,6 @@ else
     exec tint2 -c ~/.config/tint2/icons.tint2rc &
     #exec tint2 -c ~/.config/tint2/systray.tint2rc &
     #exec ~/bin/xd &
-    exec ~/bin/tint2 -c ~/.config/tint2/workspaces.tint2rc &
+    exec tint2 -c ~/.config/tint2/workspaces.tint2rc &
 fi
 exit
