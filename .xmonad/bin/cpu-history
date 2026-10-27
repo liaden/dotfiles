@@ -1,0 +1,16 @@
+#!/bin/bash
+# Keeps 90 s of CPU busy % outside eww, so the sidebar graph opens full and survives reloads.
+out=${XDG_RUNTIME_DIR:?}/cpu-history.json
+samples=()
+read -r _ u n s i w q sq st _ < /proc/stat
+prev_total=$((u + n + s + i + w + q + sq + st)) prev_idle=$((i + w))
+while sleep 2; do
+    read -r _ u n s i w q sq st _ < /proc/stat
+    total=$((u + n + s + i + w + q + sq + st)) idle=$((i + w))
+    dt=$((total - prev_total)) di=$((idle - prev_idle))
+    samples+=($((dt > 0 ? 100 * (dt - di) / dt : 0)))
+    # Trim only once over 45: the spike hit bash's empty-slice bug slicing at the limit.
+    ((${#samples[@]} > 45)) && samples=("${samples[@]: -45}")
+    prev_total=$total prev_idle=$idle
+    printf '[%s]\n' "$(IFS=,; echo "${samples[*]}")" >"$out.tmp" && mv "$out.tmp" "$out"
+done

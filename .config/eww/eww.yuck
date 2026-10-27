@@ -31,6 +31,9 @@
 ;; --- Network status (nmcli; only polls while the sidebar is shown) ---
 (defpoll network :interval "5s" :initial "{}" :run-while sidebar-open `~/.config/eww/scripts/network`)
 
+;; --- CPU history: ~/.xmonad/bin/cpu-history (a user service) keeps 90 s, so the graph opens full ---
+(defpoll cpuhist :interval "2s" :initial "[]" :run-while sidebar-open `cat $XDG_RUNTIME_DIR/cpu-history.json 2>/dev/null || echo []`)
+
 ;; --- RAM comes from the built-in EWW_RAM magic variable (no getram poll) ---
 
 ;; --- Battery ---
@@ -116,7 +119,9 @@
     (box :class "r-graph-wrap" :orientation "v" :space-evenly false
       (label :class "r-cap" :halign "start" :text "CPU LOAD  ·  90S")
       (box :class "r-graph-box"
-        (graph :class "r-graph" :vexpand true :value {EWW_CPU.avg} :time-range "90s" :min 0 :max 100 :thickness 2)))))
+        (box :class "r-bars" :orientation "h" :space-evenly false :halign "end" :vexpand true
+          (for v in cpuhist
+            (box :class "r-bar" :valign "end" :style "min-height: ${round(v * 0.6, 0)}px;")))))))
 
 (defwidget r-network []
   (box :class "r-sec" :orientation "v" :space-evenly false

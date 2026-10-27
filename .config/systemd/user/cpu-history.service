@@ -1,0 +1,9 @@
+[Unit]
+Description=CPU usage history for the eww sidebar
+
+[Service]
+ExecStart=%h/.xmonad/bin/cpu-history
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

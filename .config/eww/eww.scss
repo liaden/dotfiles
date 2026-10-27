@@ -115,7 +115,8 @@ $dim:  #656e7c;
   border-radius: 8px;
   margin-top: 2px;
 }
-.r-graph { color: $amber; }             // line color (fills the box above)
+.r-bars { padding: 0px 2px; }
+.r-bar { min-width: 6px; margin-left: 1px; background-color: $amber; border-radius: 2px 2px 0px 0px; }
 
 // --- network ---
 // `.rail button` (0,1,1) outranks a bare `.r-net` (0,1,0) and would strip the
