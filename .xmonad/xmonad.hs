@@ -368,6 +368,8 @@ myManageHook = namedScratchpadManageHook scratchpads <+> composeAll
     , isInProperty "_NET_WM_WINDOW_TYPE" "_NET_WM_WINDOW_TYPE_MENU"       --> doIgnore
     , isDialog     --> doCenterFloat
     , isFullscreen --> doFullFloat
+    -- The client is a steamwebhelper window with class "steam"; games are steam_app_<id>.
+    , className =? "steam" --> doShift (myWorkspaces !! 1)
     ]
 
 ------------------------------------------------------------------------
