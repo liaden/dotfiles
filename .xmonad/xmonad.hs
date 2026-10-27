@@ -8,16 +8,15 @@
 import XMonad
 import XMonad.Layout.Fullscreen
     ( fullscreenManageHook, fullscreenSupport, fullscreenFull )
-import Data.Monoid ( All(..) )
 import System.Exit ()
 import XMonad.Util.SpawnOnce ( spawnOnce )
 import XMonad.Util.NamedScratchpad
 import XMonad.Actions.Submap
 import Graphics.X11.ExtraTypes.XF86 (xF86XK_AudioLowerVolume, xF86XK_AudioRaiseVolume, xF86XK_AudioMute, xF86XK_MonBrightnessDown, xF86XK_MonBrightnessUp, xF86XK_AudioPlay, xF86XK_AudioPrev, xF86XK_AudioNext)
 import XMonad.Hooks.EwmhDesktops ( ewmh, ewmhFullscreen )
-import Control.Monad ( join, when, unless )
-import Data.Typeable ( Typeable )
-import qualified XMonad.Util.ExtensibleState as XS
+import Control.Monad ( join, when )
+import qualified XMonad.Actions.PhysicalScreens as PS
+import XMonad.Hooks.Rescreen ( addAfterRescreenHook, setRescreenWorkspacesHook )
 import XMonad.Layout.NoBorders
 import XMonad.Hooks.ManageDocks
     ( avoidStruts, docks, manageDocks )
@@ -32,7 +31,6 @@ import XMonad.Layout.Gaps
       setGaps,
       GapMessage(DecGap, ToggleGaps, IncGap) )
 
-import XMonad.Layout.Column
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
 import Data.Maybe (maybeToList)
@@ -153,8 +151,8 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
     , ("WORKSPACES",
         [ Doc  "Mod-1..9"                      "Switch to workspace"
         , Doc  "Mod-Shift-1..9"                "Move window to workspace"
-        , Doc  "Mod-w e r"                     "Focus screen 1, 2, 3"
-        , Doc  "Mod-Shift-w e r"               "Move window to screen 1, 2, 3"
+        , Doc  "Mod-w e r"                     "Focus screen 1, 2, 3 from the left"
+        , Doc  "Mod-Shift-w e r"               "Move window to screen 1, 2, 3 from the left"
         ])
 
     -- A submap because modm already includes control, so mod-control-t would collide with mod-t.
@@ -191,6 +189,7 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
         , Bind (modm,               xK_z     ) "Inhibit idle"         $ spawn "exec ~/.xmonad/bin/inhibit_activate"
         , Bind (modm .|. shiftMask, xK_z     ) "Allow idle"           $ spawn "exec ~/.xmonad/bin/inhibit_deactivate"
         , Bind (modm .|. shiftMask, xK_a     ) "Clipboard history"    $ spawn "exec ~/.xmonad/bin/clipboardy"
+        , Bind (modm .|. shiftMask, xK_m     ) "Toggle portrait monitor" $ spawn "~/.xmonad/bin/toggle-portrait"
         , Bind (modm,               xK_q     ) "Restart xmonad"       $ spawn "xmonad --recompile 2> /tmp/xmonad-build.log && xmonad --restart || notify-send -u critical 'xmonad build failed' \"$(tail -20 /tmp/xmonad-build.log)\""
         , Bind (modm .|. shiftMask, xK_q     ) "Power menu"           $ spawn "~/.config/rofi/scripts/powermenu.sh type-3 style-5"
         , Bind (modm .|. shiftMask, xK_slash ) "Key bindings"         $ showKeyHelp modm (myBindings conf)
@@ -202,9 +201,9 @@ workspaceKeys conf@(XConfig {XMonad.modMask = modm}) =
         | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
         , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
     ++
-    [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
+    [((m .|. modm, key), f def (PS.P sc))
         | (key, sc) <- zip [xK_w, xK_e, xK_r] [0..]
-        , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
+        , (f, m) <- [(PS.viewScreen, 0), (PS.sendToScreen, shiftMask)]]
 
 -- The JSON goes through a shell argument rather than a file so a stale cheat
 -- sheet can never outlive the build that wrote it.
@@ -370,43 +369,6 @@ myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+
     ]
 
 ------------------------------------------------------------------------
--- Event handling
-
--- ExtensibleState to track popup windows that sent _NET_ACTIVE_WINDOW.
--- After ewmh resets _NET_ACTIVE_WINDOW to Steam, popupActiveWindowHook
--- overrides it back to the popup so CEF keeps the menu open.
-newtype PendingPopup = PendingPopup (Maybe Window) deriving Typeable
-instance ExtensionClass PendingPopup where
-    initialValue = PendingPopup Nothing
-
-myEventHook :: Event -> X All
-myEventHook (ClientMessageEvent { ev_window = w, ev_message_type = mt }) = do
-    netActive <- getAtom "_NET_ACTIVE_WINDOW"
-    when (mt == netActive) $ do
-        managed <- isClient w
-        unless managed $ XS.put (PendingPopup (Just w))
-    return (All True)
-myEventHook _ = return (All True)
-
--- Run this AFTER ewmh's logHook to restore _NET_ACTIVE_WINDOW and X11 focus
--- to the popup. ewmh's windows(W.focusWindow popup) resets both back to Steam,
--- which causes CEF to see FocusOut on the popup and dismiss it.
-popupActiveWindowHook :: X ()
-popupActiveWindowHook = do
-    PendingPopup mpw <- XS.get
-    case mpw of
-        Nothing -> return ()
-        Just pw -> do
-            XS.put (PendingPopup Nothing)
-            r <- asks theRoot
-            withDisplay $ \dpy -> do
-                a_naw <- getAtom "_NET_ACTIVE_WINDOW"
-                a_win <- getAtom "WINDOW"
-                io $ changeProperty32 dpy r a_naw a_win propModeReplace [fromIntegral pw]
-                io $ setInputFocus dpy pw revertToPointerRoot 0
-
-
-------------------------------------------------------------------------
 -- Status bars and logging
 
 -- Perform an arbitrary action on each internal state change or X event.
@@ -440,9 +402,12 @@ myStartupHook = do
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
-main = xmonad $ fullscreenSupport $ docks $ ewmhFullscreen $
-    let ewmhCfg = ewmh defaults
-    in ewmhCfg { logHook = logHook ewmhCfg <+> popupActiveWindowHook }
+main = xmonad $ fullscreenSupport $ addAfterRescreenHook restartBars $ setRescreenWorkspacesHook (PS.rescreen def) $
+    docks $ ewmhFullscreen $ ewmh defaults
+
+-- The bars are sized to the screens they started on, so they restart with the outputs.
+restartBars :: X ()
+restartBars = spawn "pkill -x tint2; while pgrep -x tint2 >/dev/null; do sleep 0.1; done; ~/.xmonad/bin/bartoggle; eww reload"
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will
@@ -468,7 +433,6 @@ defaults = def {
       -- hooks, layouts
         manageHook = myManageHook,
         layoutHook = myLayout,
-        handleEventHook    = myEventHook,
         logHook            = myLogHook,
         startupHook        = myStartupHook >> addEWMHFullscreen
     }

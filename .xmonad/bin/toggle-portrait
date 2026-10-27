@@ -1,0 +1,9 @@
+#!/bin/sh
+port=$(~/.xmonad/bin/monitor-port portrait | head -1)
+if [ -z "$port" ]; then
+    notify-send "Portrait monitor" "Not connected"
+elif xrandr --listactivemonitors | grep -qw "$port"; then
+    xrandr --output "$port" --off
+else
+    ~/.xmonad/bin/align-monitors.sh
+fi

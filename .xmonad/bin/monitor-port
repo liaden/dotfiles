@@ -1,0 +1,14 @@
+#!/bin/sh
+# Usage: monitor-port main|portrait
+# Port names move between boots and cards, so the main LG panel is found by its
+# EDID (vendor, product, serial 38331); any other connected output is the portrait one.
+main_edid=1e6d095bbb950000
+xrandr --prop | awk -v want="$1" -v main="$main_edid" '
+  function flush() {
+    if (port != "" && (index(edid, main) > 0) == (want == "main")) print port
+    port = ""; edid = ""
+  }
+  /^[^ \t]/ { flush(); if ($2 == "connected") port = $1; next }
+  inedid && /^\t\t[0-9a-f]+$/ { edid = edid $1; next }
+  { inedid = /EDID:/ }
+  END { flush() }'
