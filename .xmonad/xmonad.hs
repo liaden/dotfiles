@@ -26,6 +26,12 @@ import XMonad.Layout.Spacing ( spacingRaw, Border(Border) )
 import XMonad.Layout.PerScreen
 import XMonad.Layout.Column
 import XMonad.Layout.ThreeColumns
+import XMonad.Actions.CycleWS ( toggleWS' )
+import XMonad.Actions.WindowBringer ( gotoMenuConfig, WindowBringerConfig(..) )
+import XMonad.Actions.UpdatePointer ( updatePointer )
+import XMonad.Layout.ToggleLayouts ( toggleLayouts, ToggleLayout(..) )
+import XMonad.Layout.ResizableTile ( ResizableTall(..), MirrorResize(..) )
+import XMonad.Layout.Renamed ( renamed, Rename(..) )
 import XMonad.Layout.Gaps
     ( gaps,
       setGaps,
@@ -115,6 +121,7 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
         [ Bind (modm .|. shiftMask, xK_Return) "Terminal"     $ spawn $ XMonad.terminal conf
         , Bind (modm,               xK_o     ) "App launcher" $ spawn "~/.config/rofi/scripts/launcher.sh type-7 style-4"
         , Bind (modm,               xK_p     ) "Dashboard"    $ spawn "~/.xmonad/bin/eww-toggle dashboard"
+        , Bind (modm .|. shiftMask, xK_o     ) "Go to window by title" $ gotoMenuConfig def { menuCommand = "rofi", menuArgs = ["-dmenu", "-i"] }
         , Bind (modm,               xK_s     ) "Sidebar"      $ spawn "~/.xmonad/bin/eww-toggle sidebar"
         , Sub  (modm,               xK_f     ) "Scratchpads"
             [ Bind (0, xK_m) "Music scratchpad"   $ namedScratchpadAction scratchpads "music"
@@ -141,8 +148,13 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
     , ("LAYOUT",
         [ Bind (modm,               xK_Tab   ) "Next layout"          $ sendMessage NextLayout
         , Bind (modm .|. shiftMask, xK_Tab   ) "Reset layout"         $ setLayout $ XMonad.layoutHook conf
+        , Bind (modm,               xK_space ) "Toggle full screen layout" $ sendMessage ToggleLayout
+        , Bind (modm,               xK_i     ) "Show layout name"     showLayoutName
         , Bind (modm,               xK_h     ) "Shrink master"        $ sendMessage Shrink
         , Bind (modm,               xK_l     ) "Expand master"        $ sendMessage Expand
+        -- ResizableTall names these for its mirrored form, so they read backwards here.
+        , Bind (modm .|. shiftMask, xK_h     ) "Shrink window in column" $ sendMessage MirrorExpand
+        , Bind (modm .|. shiftMask, xK_l     ) "Grow window in column" $ sendMessage MirrorShrink
         , Bind (modm,               xK_comma ) "More in master"       $ sendMessage (IncMasterN 1)
         , Bind (modm,               xK_period) "Fewer in master"      $ sendMessage (IncMasterN (-1))
         , Bind (modm,               xK_n     ) "Refresh sizes"        refresh
@@ -150,6 +162,7 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
 
     , ("WORKSPACES",
         [ Doc  "Mod-1..9"                      "Switch to workspace"
+        , Bind (modm,               xK_grave ) "Last workspace"       $ toggleWS' ["NSP"]
         , Doc  "Mod-Shift-1..9"                "Move window to workspace"
         , Doc  "Mod-w e r"                     "Focus screen 1, 2, 3 from the left"
         , Doc  "Mod-Shift-w e r"               "Move window to screen 1, 2, 3 from the left"
@@ -211,6 +224,10 @@ showKeyHelp :: KeyMask -> [(String, [Bind])] -> X ()
 showKeyHelp modm groups =
     spawn $ "eww update keyhelp=" ++ shellQuote (keyHelpJson modm groups) ++ " && ~/.xmonad/bin/eww-toggle keyhelp"
 
+showLayoutName :: X ()
+showLayoutName = withWindowSet $ \ws ->
+    spawn $ "notify-send Layout " ++ shellQuote (description . W.layout . W.workspace . W.current $ ws)
+
 shellQuote :: String -> String
 shellQuote s = "'" ++ concatMap (\c -> if c == '\'' then "'\\''" else [c]) s ++ "'"
 
@@ -247,7 +264,7 @@ keyLabel modm (mask, sym) = intercalate "-" (mods ++ [symLabel])
   where
     mods = [ "Mod" | modm /= 0, mask .&. modm == modm ] ++ [ "Shift" | mask .&. shiftMask /= 0 ]
     symLabel = M.findWithDefault (keysymToString sym) sym $ M.fromList
-        [ (xK_slash, "/"), (xK_comma, ","), (xK_period, ".")
+        [ (xK_slash, "/"), (xK_comma, ","), (xK_period, "."), (xK_grave, "`"), (xK_space, "Space")
         , (xF86XK_AudioPlay, "Play"), (xF86XK_AudioPrev, "Prev"), (xF86XK_AudioNext, "Next")
         , (xF86XK_AudioRaiseVolume, "Vol+"), (xF86XK_AudioLowerVolume, "Vol-"), (xF86XK_AudioMute, "Mute")
         , (xF86XK_MonBrightnessUp, "Bright+"), (xF86XK_MonBrightnessDown, "Bright-")
@@ -298,7 +315,8 @@ scratchpads = [ music, slack, discord ]
 ------------------------------------------------------------------------
 -- Layouts:
 
-portraitLayout = avoidStruts(Column 1 ||| Mirror (ThreeColMid nmaster delta ratio)  ||| Full)
+portraitLayout =
+  named "Column" (Column 1) ||| named "ThreeRow" (Mirror (ThreeColMid nmaster delta ratio)) ||| Full
   where
      -- The default number of windows in the master pane
      nmaster = 1
@@ -311,10 +329,10 @@ portraitLayout = avoidStruts(Column 1 ||| Mirror (ThreeColMid nmaster delta rati
 
 --
 landscapeLayout =
-  avoidStruts(tiled ||| Mirror tiled ||| ThreeColMid nmaster delta ratio  ||| Full)
+  named "Tall" tiled ||| named "Wide" (Mirror tiled) ||| named "ThreeCol" (ThreeColMid nmaster delta ratio) ||| Full
   where
      -- default tiling algorithm partitions the screen into two panes
-     tiled   = Tall nmaster delta ratio
+     tiled   = ResizableTall nmaster delta ratio []
 
      -- The default number of windows in the master pane
      nmaster = 1
@@ -325,10 +343,16 @@ landscapeLayout =
      -- Percent of screen to increment by when resizing panes
      delta   = 3/100
 
--- One vertical 4k monitor, 1 horizontal 4k monitor
-myLayout = gaps [(L,0), (R,0), (U,0), (D,0)] $
+named n = renamed [Replace n]
+
+-- One vertical 4k monitor, 1 horizontal 4k monitor.
+-- Spacing and gaps prefix the name, which Mod-i would show.
+myLayout = renamed [KeepWordsRight 1] $
+           gaps [(L,0), (R,0), (U,0), (D,0)] $
             spacingRaw True screenBorder True windowBorder True $
             smartBorders $
+            avoidStruts $
+            toggleLayouts Full $
             ifWider 3000 (landscapeLayout) portraitLayout
   where
     -- adds together with screenBorder for full spacing around layout
@@ -374,7 +398,7 @@ myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+
 -- Perform an arbitrary action on each internal state change or X event.
 -- See the 'XMonad.Hooks.DynamicLog' extension for examples.
 --
-myLogHook = return ()
+myLogHook = updatePointer (0.5, 0.5) (0, 0)
 
 ------------------------------------------------------------------------
 -- Startup hook
