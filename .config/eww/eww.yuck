@@ -254,3 +254,41 @@
   :geometry (geometry :x "0px" :y "0px" :width "1560px" :height "720px" :anchor "center")
   :stacking "fg" :wm-ignore true
   (dashboard))
+
+
+;; ===== Key bindings cheat sheet (Mod+Shift+/) =====
+;; xmonad pushes the JSON on every open, built from the same list it binds.
+
+(defvar keyhelp `{"columns":[]}`)
+(defvar keyhelp-open false)
+
+(defwidget k-row [key desc]
+  (box :class "k-row" :orientation "h" :space-evenly false
+    (label :class "k-key" :xalign 0 :text key)
+    (label :class "k-desc" :halign "start" :text desc)))
+
+(defwidget keyhelp []
+  (eventbox :onclick "~/.xmonad/bin/eww-toggle keyhelp close"
+    (box :class "keyhelp" :orientation "v" :space-evenly false
+      (box :class "k-title" :orientation "h" :space-evenly false
+        (label :class "k-title-main" :halign "start" :hexpand true :text "Key bindings")
+        (label :class "k-title-sub" :halign "end" :text "Mod = butterfly  ·  click to close"))
+      (box :class "k-cols" :orientation "h" :space-evenly false
+        (for col in {keyhelp.columns}
+          (box :class "k-col" :orientation "v" :space-evenly false
+            (for sec in col
+              (box :class "r-sec" :orientation "v" :space-evenly false
+                (r-head :name {sec.title}
+                        :accent {sec.title == "LAUNCH" ? "pink"
+                               : sec.title == "WINDOWS" ? "blue"
+                               : sec.title == "LAYOUT" ? "violet"
+                               : sec.title == "WORKSPACES" ? "green"
+                               : sec.title == "GAPS" ? "amber"
+                               : "coral"})
+                (for r in {sec.rows}
+                  (k-row :key {r.key} :desc {r.desc}))))))))))
+
+(defwindow keyhelp
+  :geometry (geometry :x "0px" :y "0px" :anchor "center")
+  :stacking "fg" :wm-ignore true
+  (keyhelp))

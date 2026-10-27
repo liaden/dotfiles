@@ -6,6 +6,10 @@ SIDEBAR=%w[
   sidebar
 ]
 
+KEYHELP=%w[
+  keyhelp
+]
+
 DASHBOARD=%w[
   dashboard
 ]
@@ -13,6 +17,7 @@ DASHBOARD=%w[
 WINDOW_LIST={
   dashboard: DASHBOARD,
   sidebar: SIDEBAR,
+  keyhelp: KEYHELP,
 }
 
 def eww_windows

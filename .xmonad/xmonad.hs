@@ -36,6 +36,8 @@ import XMonad.Layout.Column
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
 import Data.Maybe (maybeToList)
+import Data.List (intercalate)
+import Data.Bits ((.&.))
 -- The preferred terminal program, which is used in a binding below and by
 -- certain contrib modules.
 --
@@ -97,142 +99,160 @@ addEWMHFullscreen   = do
 ------------------------------------------------------------------------
 -- Key bindings. Add, modify or remove key bindings here.
 --
-myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
+-- Each binding carries its description, so the cheat sheet is built from the
+-- same list xmonad binds and cannot drift from it.
+data Bind = Bind (KeyMask, KeySym) String (X ())
+          | Sub  (KeyMask, KeySym) String [Bind]
+          | Doc  String String
 
-    -- launch a terminal
-    [ ((modm .|. shiftMask, xK_Return), spawn $ XMonad.terminal conf)
+myKeys conf = M.fromList $ concatMap toKeys (concatMap snd (myBindings conf)) ++ workspaceKeys conf
+  where
+    toKeys (Bind k _ a) = [(k, a)]
+    toKeys (Sub k _ bs) = [(k, submap . M.fromList $ concatMap toKeys bs)]
+    toKeys (Doc _ _)    = []
 
-    -- launch rofi, dashboard, and sidebar
-    , ((modm,               xK_o     ), spawn "~/.config/rofi/scripts/launcher.sh type-7 style-4")
-    , ((modm,               xK_p     ), spawn "~/.xmonad/bin/eww-toggle dashboard")
-    , ((modm,               xK_s     ), spawn "~/.xmonad/bin/eww-toggle sidebar")
-
-    -- scratchpads
-    , ((modm, xK_f), submap . M.fromList $
-        [ ((0, xK_m),                   namedScratchpadAction scratchpads "music")
-        , ((0, xK_s),                   namedScratchpadAction scratchpads "slack")
-        , ((0, xK_d),                   namedScratchpadAction scratchpads "discord")
+myBindings :: XConfig Layout -> [(String, [Bind])]
+myBindings conf@(XConfig {XMonad.modMask = modm}) =
+    [ ("LAUNCH",
+        [ Bind (modm .|. shiftMask, xK_Return) "Terminal"     $ spawn $ XMonad.terminal conf
+        , Bind (modm,               xK_o     ) "App launcher" $ spawn "~/.config/rofi/scripts/launcher.sh type-7 style-4"
+        , Bind (modm,               xK_p     ) "Dashboard"    $ spawn "~/.xmonad/bin/eww-toggle dashboard"
+        , Bind (modm,               xK_s     ) "Sidebar"      $ spawn "~/.xmonad/bin/eww-toggle sidebar"
+        , Sub  (modm,               xK_f     ) "Scratchpads"
+            [ Bind (0, xK_m) "Music scratchpad"   $ namedScratchpadAction scratchpads "music"
+            , Bind (0, xK_s) "Slack scratchpad"   $ namedScratchpadAction scratchpads "slack"
+            , Bind (0, xK_d) "Discord scratchpad" $ namedScratchpadAction scratchpads "discord"
+            ]
         ])
 
-    -- Audio keys
-    , ((0,                    xF86XK_AudioPlay), spawn "playerctl play-pause")
-    , ((0,                    xF86XK_AudioPrev), spawn "playerctl previous")
-    , ((0,                    xF86XK_AudioNext), spawn "playerctl next")
-    , ((0,                    xF86XK_AudioRaiseVolume), spawn "pactl set-sink-volume 0 +5%")
-    , ((0,                    xF86XK_AudioLowerVolume), spawn "pactl set-sink-volume 0 -5%")
-    , ((0,                    xF86XK_AudioMute), spawn "pactl set-sink-mute 0 toggle")
+    , ("WINDOWS",
+        [ Bind (modm,               xK_j     ) "Focus next"           $ windows W.focusDown
+        , Bind (modm,               xK_k     ) "Focus previous"       $ windows W.focusUp
+        , Bind (modm,               xK_m     ) "Focus master"         $ windows W.focusMaster
+        , Bind (modm,               xK_Return) "Swap with master"     $ windows W.swapMaster
+        , Bind (modm .|. shiftMask, xK_j     ) "Swap with next"       $ windows W.swapDown
+        , Bind (modm .|. shiftMask, xK_k     ) "Swap with previous"   $ windows W.swapUp
+        , Bind (modm,               xK_t     ) "Sink into tiling"     $ withFocused $ windows . W.sink
+        , Bind (modm .|. shiftMask, xK_f     ) "Float full screen"    $ withFocused $ \w -> windows $ W.float w (W.RationalRect 0 0 1 1)
+        , Bind (modm .|. shiftMask, xK_c     ) "Close window"         kill
+        , Doc  "Mod-Drag left"                 "Float and move"
+        , Doc  "Mod-Drag right"                "Float and resize"
+        , Doc  "Mod-Click middle"              "Raise"
+        ])
 
-    -- Brightness keys
-    , ((0,                    xF86XK_MonBrightnessUp), spawn "brightnessctl s +10%")
-    , ((0,                    xF86XK_MonBrightnessDown), spawn "brightnessctl s 10-%")
+    , ("LAYOUT",
+        [ Bind (modm,               xK_Tab   ) "Next layout"          $ sendMessage NextLayout
+        , Bind (modm .|. shiftMask, xK_Tab   ) "Reset layout"         $ setLayout $ XMonad.layoutHook conf
+        , Bind (modm,               xK_h     ) "Shrink master"        $ sendMessage Shrink
+        , Bind (modm,               xK_l     ) "Expand master"        $ sendMessage Expand
+        , Bind (modm,               xK_comma ) "More in master"       $ sendMessage (IncMasterN 1)
+        , Bind (modm,               xK_period) "Fewer in master"      $ sendMessage (IncMasterN (-1))
+        , Bind (modm,               xK_n     ) "Refresh sizes"        refresh
+        ])
 
-    -- Screenshot
-    , ((0,                    xK_Print), spawn "~/.xmonad/bin/maimcopy")
-    , ((modm,                 xK_Print), spawn "~/.xmonad/bin/maimsave")
+    , ("WORKSPACES",
+        [ Doc  "Mod-1..9"                      "Switch to workspace"
+        , Doc  "Mod-Shift-1..9"                "Move window to workspace"
+        , Doc  "Mod-w e r"                     "Focus screen 1, 2, 3"
+        , Doc  "Mod-Shift-w e r"               "Move window to screen 1, 2, 3"
+        ])
 
-    -- My Stuff
-    , ((modm,               xK_b     ), spawn "exec ~/.xmonad/bin/bartoggle")
-    , ((modm,               xK_z     ), spawn "exec ~/.xmonad/bin/inhibit_activate")
-    , ((modm .|. shiftMask, xK_z     ), spawn "exec ~/.xmonad/bin/inhibit_deactivate")
-    , ((modm .|. shiftMask, xK_a     ), spawn "exec ~/.xmonad/bin/clipboardy")
-
-    -- close focused window
-    , ((modm .|. shiftMask, xK_c     ), kill)
-
-    -- GAPS!!!
     -- A submap because modm already includes control, so mod-control-t would collide with mod-t.
-    , ((modm, xK_g), submap . M.fromList $
-        [ ((0, xK_g), sendMessage $ ToggleGaps)                              -- toggle all gaps
-        , ((0, xK_t), sendMessage $ IncGap 10 L)                             -- increment the left-hand gap
-        , ((0, xK_y), sendMessage $ IncGap 10 U)                             -- increment the top gap
-        , ((0, xK_u), sendMessage $ IncGap 10 D)                             -- increment the bottom gap
-        , ((0, xK_i), sendMessage $ IncGap 10 R)                             -- increment the right-hand gap
+    , ("GAPS",
+        [ Sub  (modm,               xK_g     ) "Gaps"
+            [ Bind (0, xK_g) "Toggle gaps"        $ sendMessage ToggleGaps
+            , Bind (0, xK_t) "Grow left gap"      $ sendMessage $ IncGap 10 L
+            , Bind (0, xK_y) "Grow top gap"       $ sendMessage $ IncGap 10 U
+            , Bind (0, xK_u) "Grow bottom gap"    $ sendMessage $ IncGap 10 D
+            , Bind (0, xK_i) "Grow right gap"     $ sendMessage $ IncGap 10 R
+            ]
+        , Bind (modm .|. shiftMask, xK_t     ) "Shrink left gap"      $ sendMessage $ DecGap 10 L
+        , Bind (modm .|. shiftMask, xK_y     ) "Shrink top gap"       $ sendMessage $ DecGap 10 U
+        , Bind (modm .|. shiftMask, xK_u     ) "Shrink bottom gap"    $ sendMessage $ DecGap 10 D
+        , Bind (modm .|. shiftMask, xK_i     ) "Shrink right gap"     $ sendMessage $ DecGap 10 R
+        , Bind (modm .|. shiftMask, xK_g     ) "Reset gaps"           $ sendMessage $ setGaps [(L,30), (R,30), (U,40), (D,60)]
         ])
-    , ((modm .|. shiftMask, xK_g), sendMessage $ setGaps [(L,30), (R,30), (U,40), (D,60)]) -- reset the GapSpec
 
-    , ((modm .|. shiftMask, xK_t     ), sendMessage $ DecGap 10 L)           -- decrement the left-hand gap
-    , ((modm .|. shiftMask, xK_y     ), sendMessage $ DecGap 10 U)           -- decrement the top gap
-    , ((modm .|. shiftMask, xK_u     ), sendMessage $ DecGap 10 D)           -- decrement the bottom gap
-    , ((modm .|. shiftMask, xK_i     ), sendMessage $ DecGap 10 R)           -- decrement the right-hand gap
+    , ("MEDIA",
+        [ Bind (0, xF86XK_AudioPlay)          "Play / pause"          $ spawn "playerctl play-pause"
+        , Bind (0, xF86XK_AudioPrev)          "Previous track"        $ spawn "playerctl previous"
+        , Bind (0, xF86XK_AudioNext)          "Next track"            $ spawn "playerctl next"
+        , Bind (0, xF86XK_AudioRaiseVolume)   "Volume up"             $ spawn "pactl set-sink-volume 0 +5%"
+        , Bind (0, xF86XK_AudioLowerVolume)   "Volume down"           $ spawn "pactl set-sink-volume 0 -5%"
+        , Bind (0, xF86XK_AudioMute)          "Mute"                  $ spawn "pactl set-sink-mute 0 toggle"
+        , Bind (0, xF86XK_MonBrightnessUp)    "Brightness up"         $ spawn "brightnessctl s +10%"
+        , Bind (0, xF86XK_MonBrightnessDown)  "Brightness down"       $ spawn "brightnessctl s 10-%"
+        , Bind (0,                  xK_Print ) "Screenshot to clipboard" $ spawn "~/.xmonad/bin/maimcopy"
+        , Bind (modm,               xK_Print ) "Screenshot to file"   $ spawn "~/.xmonad/bin/maimsave"
+        ])
 
-     -- Rotate through the available layout algorithms
-    , ((modm,               xK_Tab   ), sendMessage NextLayout)
-
-    --  Reset the layouts on the current workspace to default
-    , ((modm .|. shiftMask, xK_Tab   ), setLayout $ XMonad.layoutHook conf)
-
-    -- Resize viewed windows to the correct size
-    , ((modm,               xK_n     ), refresh)
-
-    -- Move focus to the next window
-    , ((modm,               xK_j     ), windows W.focusDown)
-
-    -- Move focus to the previous window
-    , ((modm,               xK_k     ), windows W.focusUp  )
-
-    -- Move focus to the master window
-    , ((modm,               xK_m     ), windows W.focusMaster  )
-
-    -- Swap the focused window and the master window
-    , ((modm,               xK_Return), windows W.swapMaster)
-
-    -- Swap the focused window with the next window
-    , ((modm .|. shiftMask, xK_j     ), windows W.swapDown  )
-
-    -- Swap the focused window with the previous window
-    , ((modm .|. shiftMask, xK_k     ), windows W.swapUp    )
-
-    -- Shrink the master area
-    , ((modm,               xK_h     ), sendMessage Shrink)
-
-    -- Expand the master area
-    , ((modm,               xK_l     ), sendMessage Expand)
-
-    -- Push window back into tiling
-    , ((modm,               xK_t     ), withFocused $ windows . W.sink)
-
-    -- Float focused window to full screen
-    , ((modm .|. shiftMask, xK_f     ), withFocused $ \w -> windows $ W.float w (W.RationalRect 0 0 1 1))
-
-    -- Increment the number of windows in the master area
-    , ((modm              , xK_comma ), sendMessage (IncMasterN 1))
-
-    -- Deincrement the number of windows in the master area
-    , ((modm              , xK_period), sendMessage (IncMasterN (-1)))
-
-    -- Toggle the status bar gap
-    -- Use this binding with avoidStruts from Hooks.ManageDocks.
-    -- See also the statusBar function from Hooks.DynamicLog.
-    --
-    -- , ((modm              , xK_b     ), sendMessage ToggleStruts)
-
-    -- Quit xmonad
-    , ((modm .|. shiftMask, xK_q     ), spawn "~/.config/rofi/scripts/powermenu.sh type-3 style-5")
-
-    -- Restart xmonad
-    , ((modm              , xK_q     ), spawn "xmonad --recompile; xmonad --restart")
-
-    -- Run xmessage with a summary of the default keybindings (useful for beginners)
-    , ((modm .|. shiftMask, xK_slash ), spawn ("echo \"" ++ help ++ "\" | xmessage -file -"))
+    , ("SESSION",
+        [ Bind (modm,               xK_b     ) "Toggle bar"           $ spawn "exec ~/.xmonad/bin/bartoggle"
+        , Bind (modm,               xK_z     ) "Inhibit idle"         $ spawn "exec ~/.xmonad/bin/inhibit_activate"
+        , Bind (modm .|. shiftMask, xK_z     ) "Allow idle"           $ spawn "exec ~/.xmonad/bin/inhibit_deactivate"
+        , Bind (modm .|. shiftMask, xK_a     ) "Clipboard history"    $ spawn "exec ~/.xmonad/bin/clipboardy"
+        , Bind (modm,               xK_q     ) "Restart xmonad"       $ spawn "xmonad --recompile; xmonad --restart"
+        , Bind (modm .|. shiftMask, xK_q     ) "Power menu"           $ spawn "~/.config/rofi/scripts/powermenu.sh type-3 style-5"
+        , Bind (modm .|. shiftMask, xK_slash ) "Key bindings"         $ showKeyHelp modm (myBindings conf)
+        ])
     ]
-    ++
 
-    --
-    -- mod-[1..9], Switch to workspace N
-    -- mod-shift-[1..9], Move client to workspace N
-    --
+workspaceKeys conf@(XConfig {XMonad.modMask = modm}) =
     [((m .|. modm, k), windows $ f i)
         | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
         , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
     ++
-
-    --
-    -- mod-{w,e,r}, Switch to physical/Xinerama screens 1, 2, or 3
-    -- mod-shift-{w,e,r}, Move client to screen 1, 2, or 3
-    --
     [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
         | (key, sc) <- zip [xK_w, xK_e, xK_r] [0..]
         , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
+
+-- The JSON goes through a shell argument rather than a file so a stale cheat
+-- sheet can never outlive the build that wrote it.
+showKeyHelp :: KeyMask -> [(String, [Bind])] -> X ()
+showKeyHelp modm groups =
+    spawn $ "eww update keyhelp=" ++ shellQuote (keyHelpJson modm groups) ++ " && ~/.xmonad/bin/eww-toggle keyhelp"
+
+shellQuote :: String -> String
+shellQuote s = "'" ++ concatMap (\c -> if c == '\'' then "'\\''" else [c]) s ++ "'"
+
+keyHelpJson :: KeyMask -> [(String, [Bind])] -> String
+keyHelpJson modm groups = obj [("columns", arr (map (arr . map section) (balance 3 groups)))]
+  where
+    section (title, bs) = obj [("title", str title), ("rows", arr (map row (concatMap (helpRows modm "") bs)))]
+    row (k, d) = obj [("key", str k), ("desc", str d)]
+    obj kvs = "{" ++ intercalate "," [str k ++ ":" ++ v | (k, v) <- kvs] ++ "}"
+    arr vs = "[" ++ intercalate "," vs ++ "]"
+    str s = "\"" ++ concatMap esc s ++ "\""
+    esc '"'  = "\\\""
+    esc '\\' = "\\\\"
+    esc c    = [c]
+    -- Contiguous split keeps the sections in reading order down each column.
+    balance n gs = go gs
+      where
+        weight (_, bs) = 2 + length (concatMap (helpRows modm "") bs)
+        target = (sum (map weight gs) + n - 1) `div` n
+        go [] = []
+        go xs = let (col, rest) = fill 0 xs in col : go rest
+        fill _ [] = ([], [])
+        fill acc (x:xs)
+            | acc > 0 && acc + weight x > target = ([], x:xs)
+            | otherwise = let (col, rest) = fill (acc + weight x) xs in (x:col, rest)
+
+helpRows :: KeyMask -> String -> Bind -> [(String, String)]
+helpRows modm prefix (Bind k d _) = [(prefix ++ keyLabel modm k, d)]
+helpRows modm prefix (Sub k _ bs) = concatMap (helpRows modm (prefix ++ keyLabel modm k ++ " ")) bs
+helpRows _    _      (Doc k d)    = [(k, d)]
+
+keyLabel :: KeyMask -> (KeyMask, KeySym) -> String
+keyLabel modm (mask, sym) = intercalate "-" (mods ++ [symLabel])
+  where
+    mods = [ "Mod" | modm /= 0, mask .&. modm == modm ] ++ [ "Shift" | mask .&. shiftMask /= 0 ]
+    symLabel = M.findWithDefault (keysymToString sym) sym $ M.fromList
+        [ (xK_slash, "/"), (xK_comma, ","), (xK_period, ".")
+        , (xF86XK_AudioPlay, "Play"), (xF86XK_AudioPrev, "Prev"), (xF86XK_AudioNext, "Next")
+        , (xF86XK_AudioRaiseVolume, "Vol+"), (xF86XK_AudioLowerVolume, "Vol-"), (xF86XK_AudioMute, "Mute")
+        , (xF86XK_MonBrightnessUp, "Bright+"), (xF86XK_MonBrightnessDown, "Bright-")
+        ]
 
 
 ------------------------------------------------------------------------
@@ -452,52 +472,3 @@ defaults = def {
         logHook            = myLogHook,
         startupHook        = myStartupHook >> addEWMHFullscreen
     }
-
--- | Finally, a copy of the default bindings in simple textual tabular format.
-help :: String
-help = unlines ["The default modifier key is 'alt'. Default keybindings:",
-    "",
-    "-- launching and killing programs",
-    "mod-Shift-Enter  Launch terminal",
-    "mod-p            Launch dmenu",
-    "mod-Shift-p      Launch gmrun",
-    "mod-Shift-c      Close/kill the focused window",
-    "mod-Tab          Rotate through the available layout algorithms",
-    "mod-Shift-Tab    Reset the layouts on the current workSpace to default",
-    "mod-n            Resize/refresh viewed windows to the correct size",
-    "",
-    "-- move focus up or down the window stack",
-    "mod-j          Move focus to the next window",
-    "mod-k          Move focus to the previous window",
-    "mod-m          Move focus to the master window",
-    "",
-    "-- modifying the window order",
-    "mod-Return   Swap the focused window and the master window",
-    "mod-Shift-j  Swap the focused window with the next window",
-    "mod-Shift-k  Swap the focused window with the previous window",
-    "",
-    "-- resizing the master/slave ratio",
-    "mod-h  Shrink the master area",
-    "mod-l  Expand the master area",
-    "",
-    "-- floating layer support",
-    "mod-t  Push window back into tiling; unfloat and re-tile it",
-    "",
-    "-- increase or decrease number of windows in the master area",
-    "mod-comma  (mod-,)   Increment the number of windows in the master area",
-    "mod-period (mod-.)   Deincrement the number of windows in the master area",
-    "",
-    "-- quit, or restart",
-    "mod-Shift-q  Quit xmonad",
-    "mod-q        Restart xmonad",
-    "mod-[1..9]   Switch to workSpace N",
-    "",
-    "-- Workspaces & screens",
-    "mod-Shift-[1..9]   Move client to workspace N",
-    "mod-{w,e,r}        Switch to physical/Xinerama screens 1, 2, or 3",
-    "mod-Shift-{w,e,r}  Move client to screen 1, 2, or 3",
-    "",
-    "-- Mouse bindings: default actions bound to mouse events",
-    "mod-button1  Set the window to floating mode and move by dragging",
-    "mod-button2  Raise the window to the top of the stack",
-    "mod-button3  Set the window to floating mode and resize by dragging"]

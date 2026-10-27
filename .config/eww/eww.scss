@@ -227,3 +227,33 @@ $dim:  #656e7c;
 .d-priv { color: $violet; }
 .d-act-sep { min-width: 1px; background-color: $line; margin: 4px 16px 4px 16px; }
 
+
+// ============================================================================
+//  Key bindings cheat sheet (Mod+Shift+/)
+// ============================================================================
+.keyhelp {
+  background-color: $bg;
+  color: $text;
+  font-family: $ui;
+  padding: 18px 12px 12px 12px;
+  border: 1px solid $line;
+  border-radius: 12px;
+}
+.k-title { padding: 0px 24px 4px 24px; }
+.k-title-main { font-family: $vm; font-size: 26px; color: $text; }
+.k-title-sub { font-family: $vm; font-style: italic; font-size: 13px; color: $muted; }
+.k-col { min-width: 400px; }
+.k-row { margin: 3px 0px; }
+// Fixed key column so descriptions line up down the section.
+.k-key {
+  font-family: $vm;
+  font-size: 13px;
+  color: $text;
+  background-color: $surface;
+  border: 1px solid $line;
+  border-radius: 5px;
+  padding: 2px 8px;
+  min-width: 140px;
+  margin-right: 14px;
+}
+.k-desc { font-size: 14px; color: $muted; }
