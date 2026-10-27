@@ -292,3 +292,32 @@
   :geometry (geometry :x "0px" :y "0px" :anchor "center")
   :stacking "fg" :wm-ignore true
   (keyhelp))
+
+
+
+;; ===== Notification history (Mod+Shift+n) =====
+;; ~/.xmonad/bin/notif-history pushes dunst's history on every open.
+
+(defvar notifs "[]")
+(defvar notifications-open false)
+
+(defwidget notifications []
+  (eventbox :onclick "~/.xmonad/bin/eww-toggle notifications close"
+    (box :class "notifs" :orientation "v" :space-evenly false
+      (box :class "k-title" :orientation "h" :space-evenly false
+        (label :class "k-title-main" :halign "start" :hexpand true :text "Notifications")
+        (label :class "k-title-sub" :halign "end" :text "click to close"))
+      (label :class "n-empty" :visible {arraylength(notifs) == 0} :text "No notifications")
+      (box :class "n-list" :orientation "v" :space-evenly false
+        (for n in notifs
+          (box :class "n-row" :orientation "v" :space-evenly false
+            (box :orientation "h" :space-evenly false
+              (label :class "n-time" :text {n.time})
+              (label :class "n-app" :halign "start" :hexpand true :text {n.app}))
+            (label :class "n-summary" :halign "start" :xalign 0 :wrap true :text {n.summary})
+            (label :class "n-body" :visible {n.body != ""} :halign "start" :xalign 0 :wrap true :text {n.body})))))))
+
+(defwindow notifications
+  :geometry (geometry :x "16px" :y "56px" :width "520px" :anchor "top right")
+  :stacking "fg" :wm-ignore true
+  (notifications))

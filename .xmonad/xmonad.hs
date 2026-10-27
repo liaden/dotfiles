@@ -104,6 +104,7 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
         , Bind (modm,               xK_p     ) "Dashboard"    $ spawn "~/.xmonad/bin/eww-toggle dashboard"
         , Bind (modm .|. shiftMask, xK_o     ) "Go to window by title" $ gotoMenuConfig def { menuCommand = "rofi", menuArgs = ["-dmenu", "-i"] }
         , Bind (modm,               xK_s     ) "Sidebar"      $ spawn "~/.xmonad/bin/eww-toggle sidebar"
+        , Bind (modm .|. shiftMask, xK_n     ) "Notification history" $ spawn "~/.xmonad/bin/notif-history"
         , Sub  (modm,               xK_f     ) "Scratchpads"
             [ Bind (0, xK_m) "Music scratchpad"   $ namedScratchpadAction scratchpads "music"
             , Bind (0, xK_s) "Slack scratchpad"   $ namedScratchpadAction scratchpads "slack"
@@ -219,7 +220,7 @@ toggleHud = do
     spawn $ if hidden
         then "~/.xmonad/bin/bartoggle show"
         else "~/.xmonad/bin/bartoggle hide; eww close sidebar dashboard keyhelp notifications;"
-             ++ " eww update sidebar-open=false dashboard-open=false keyhelp-open=false"
+             ++ " eww update sidebar-open=false dashboard-open=false keyhelp-open=false notifications-open=false"
     applyHud
 
 -- Every workspace, not just the visible one, so switching while hidden keeps the full screen.

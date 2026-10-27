@@ -257,3 +257,28 @@ $dim:  #656e7c;
   margin-right: 14px;
 }
 .k-desc { font-size: 14px; color: $muted; }
+
+
+// ============================================================================
+//  Notification history (Mod+Shift+n)
+// ============================================================================
+.notifs {
+  background-color: $bg;
+  color: $text;
+  font-family: $ui;
+  padding: 18px 12px 12px 12px;
+  border: 1px solid $line;
+  border-radius: 12px;
+}
+.n-list { padding: 8px 12px 0px 12px; }
+.n-empty { font-size: 14px; color: $muted; padding: 16px 24px; }
+.n-row {
+  background-color: $surface;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.n-time { font-family: $vm; font-size: 13px; color: $amber; margin-right: 12px; }
+.n-app { font-size: 12px; font-weight: 600; letter-spacing: 1px; color: $dim; }
+.n-summary { font-size: 15px; font-weight: 600; color: $text; margin-top: 4px; }
+.n-body { font-size: 13px; color: $muted; margin-top: 3px; }

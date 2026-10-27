@@ -1,0 +1,15 @@
+#!/bin/bash
+# dunst stamps history in microseconds since boot, so the clock time is now - uptime + ts.
+# Bodies are cut in jq because eww's :limit-width would stop the label wrapping.
+up=$(cut -d' ' -f1 /proc/uptime)
+json=$(dunstctl history | jq -c --argjson up "$up" '
+  def plain: gsub("<[^>]*>"; "");
+  (now - $up) as $boot
+  | [.data[0][] | {
+      time: (($boot + .timestamp.data / 1e6) | strflocaltime("%H:%M")),
+      app: .appname.data,
+      summary: (.summary.data | plain),
+      body: (.body.data | plain | if length > 240 then .[:240] + "…" else . end)
+    }]')
+eww update notifs="$json"
+exec ~/.xmonad/bin/eww-toggle notifications
