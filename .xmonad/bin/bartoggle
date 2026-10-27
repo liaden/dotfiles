@@ -1,16 +1,18 @@
 #!/bin/bash
-if pgrep tint2; then
-    pkill tint2
-    exit 1
-else
-    #exec tint2 -c ~/.config/tint2/task.tint2rc &
-    #exec tint2 -c ~/.config/tint2/launcher.tint2rc &
-    exec tint2 -c ~/.config/tint2/panellauncher.tint2rc &
-    exec tint2 -c ~/.config/tint2/clock.tint2rc &
-    exec tint2 -c ~/.config/tint2/customscripts.tint2rc &
-    exec tint2 -c ~/.config/tint2/icons.tint2rc &
-    #exec tint2 -c ~/.config/tint2/systray.tint2rc &
-    #exec ~/bin/xd &
-    exec tint2 -c ~/.config/tint2/workspaces.tint2rc &
-fi
-exit
+# Usage: bartoggle [show|hide]; no argument toggles.
+# Output goes to /dev/null so the panels never hold a caller's pipe open.
+exec >/dev/null 2>&1
+
+show() {
+    pgrep -x tint2 && return
+    for rc in panellauncher clock customscripts icons workspaces; do
+        tint2 -c ~/.config/tint2/$rc.tint2rc &
+    done
+}
+
+case "${1:-toggle}" in
+    show) show ;;
+    hide) pkill -x tint2 ;;
+    toggle) pkill -x tint2 || show ;;
+    *) exit 2 ;;
+esac

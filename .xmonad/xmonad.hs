@@ -19,7 +19,8 @@ import XMonad.Hooks.ManageDocks ( avoidStruts, docks )
 import XMonad.Util.Types ( Direction2D(..) )
 import XMonad.Hooks.ManageHelpers ( doCenterFloat, doFullFloat, isDialog, isFullscreen, isInProperty )
 import XMonad.Util.Hacks ( windowedFullscreenFixEventHook )
-import XMonad.Layout.Spacing ( spacingRaw, Border(Border) )
+import XMonad.Layout.Spacing ( spacingRaw, Border(Border), SpacingModifier(ModifyScreenBorderEnabled) )
+import qualified XMonad.Util.ExtensibleState as XS
 import XMonad.Layout.PerScreen
 import XMonad.Layout.Column
 import XMonad.Layout.ThreeColumns
@@ -127,7 +128,7 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
 
     , ("LAYOUT",
         [ Bind (modm,               xK_Tab   ) "Next layout"          $ sendMessage NextLayout
-        , Bind (modm .|. shiftMask, xK_Tab   ) "Reset layout"         $ setLayout $ XMonad.layoutHook conf
+        , Bind (modm .|. shiftMask, xK_Tab   ) "Reset layout"         $ setLayout (XMonad.layoutHook conf) >> applyHud
         , Bind (modm,               xK_space ) "Toggle full screen layout" $ sendMessage ToggleLayout
         , Bind (modm,               xK_i     ) "Show layout name"     showLayoutName
         , Bind (modm,               xK_h     ) "Shrink master"        $ sendMessage Shrink
@@ -178,7 +179,7 @@ myBindings conf@(XConfig {XMonad.modMask = modm}) =
         ])
 
     , ("SESSION",
-        [ Bind (modm,               xK_b     ) "Toggle bar"           $ spawn "exec ~/.xmonad/bin/bartoggle"
+        [ Bind (modm,               xK_b     ) "Toggle HUD"           toggleHud
         , Bind (modm,               xK_z     ) "Inhibit idle"         $ spawn "exec ~/.xmonad/bin/inhibit_activate"
         , Bind (modm .|. shiftMask, xK_z     ) "Allow idle"           $ spawn "exec ~/.xmonad/bin/inhibit_deactivate"
         , Bind (modm .|. shiftMask, xK_a     ) "Clipboard history"    $ spawn "exec ~/.xmonad/bin/clipboardy"
@@ -203,6 +204,30 @@ workspaceKeys conf@(XConfig {XMonad.modMask = modm}) =
 showKeyHelp :: KeyMask -> [(String, [Bind])] -> X ()
 showKeyHelp modm groups =
     spawn $ "eww update keyhelp=" ++ shellQuote (keyHelpJson modm groups) ++ " && ~/.xmonad/bin/eww-toggle keyhelp"
+
+-- Persistent so a Mod-q restart, which keeps the layouts' border state, keeps the flag too.
+newtype HudHidden = HudHidden Bool deriving (Read, Show)
+
+instance ExtensionClass HudHidden where
+    initialValue  = HudHidden False
+    extensionType = PersistentExtension
+
+toggleHud :: X ()
+toggleHud = do
+    HudHidden hidden <- XS.get
+    XS.put (HudHidden (not hidden))
+    spawn $ if hidden
+        then "~/.xmonad/bin/bartoggle show"
+        else "~/.xmonad/bin/bartoggle hide; eww close sidebar dashboard keyhelp notifications;"
+             ++ " eww update sidebar-open=false dashboard-open=false keyhelp-open=false"
+    applyHud
+
+-- Every workspace, not just the visible one, so switching while hidden keeps the full screen.
+applyHud :: X ()
+applyHud = do
+    HudHidden hidden <- XS.get
+    broadcastMessage (ModifyScreenBorderEnabled (const (not hidden)))
+    refresh
 
 showLayoutName :: X ()
 showLayoutName = withWindowSet $ \ws ->
@@ -390,7 +415,7 @@ myLogHook = updatePointer (0.5, 0.5) (0, 0) >> nsSingleScratchpadPerWorkspace sc
 -- By default, do nothing.
 myStartupHook = do
   spawnOnce "exec ~/.xmonad/bin/align-monitors.sh"
-  spawnOnce "exec ~/.xmonad/bin/bartoggle"
+  spawnOnce "exec ~/.xmonad/bin/bartoggle show"
   spawnOnce "exec eww daemon"
   spawn "xsetroot -cursor_name left_ptr"
   spawnOnce "exec ~/.xmonad/bin/lock.sh"
@@ -411,7 +436,10 @@ main = xmonad $ addAfterRescreenHook restartBars $ setRescreenWorkspacesHook (PS
 
 -- The bars are sized to the screens they started on, so they restart with the outputs.
 restartBars :: X ()
-restartBars = spawn "pkill -x tint2; while pgrep -x tint2 >/dev/null; do sleep 0.1; done; ~/.xmonad/bin/bartoggle; eww reload"
+restartBars = do
+    HudHidden hidden <- XS.get
+    spawn $ (if hidden then "" else "pkill -x tint2; while pgrep -x tint2 >/dev/null; do sleep 0.1; done; ~/.xmonad/bin/bartoggle show; ")
+         ++ "eww reload"
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will
