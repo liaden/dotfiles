@@ -184,8 +184,11 @@ $dim:  #656e7c;
 
 // profile
 .d-profile { min-width: 300px; }
+// background-image is set inline from eww.yuck via ${EWW_CONFIG_DIR}: GTK
+// resolves url() against the stylesheet's base URI, and eww loads CSS through
+// load_from_data (no base URI), so a relative path cannot work here and an
+// absolute one would hardcode the username into a tracked file.
 .d-pfp {
-  background-image: url("/home/joel/.config/eww/images/p.png");
   background-size: 124px; background-repeat: no-repeat; background-position: center;
   min-width: 124px; min-height: 124px;
   border-radius: 62px; margin: 14px 0px 14px 0px;

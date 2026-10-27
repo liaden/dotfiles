@@ -169,7 +169,7 @@
 (defwidget d-profile []
   (box :class "d-card d-profile" :orientation "v" :space-evenly false
     (r-head :name "PROFILE" :accent "violet")
-    (box :class "d-pfp" :halign "center" "")
+    (box :class "d-pfp" :halign "center" :style "background-image: url('${EWW_CONFIG_DIR}/images/p.png');" "")
     (label :class "d-name" :halign "center" :text "joel")
     (label :class "d-tag" :halign "center" :text "xmonad · rust · postgres")))
 
