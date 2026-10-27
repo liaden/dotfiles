@@ -6,22 +6,19 @@
 -- Normally, you'd only override those defaults you care about.
 --
 import XMonad
-import XMonad.Layout.Fullscreen
-    ( fullscreenManageHook, fullscreenSupport, fullscreenFull )
 import System.Exit ()
 import XMonad.Util.SpawnOnce ( spawnOnce )
 import XMonad.Util.NamedScratchpad
 import XMonad.Actions.Submap
 import Graphics.X11.ExtraTypes.XF86 (xF86XK_AudioLowerVolume, xF86XK_AudioRaiseVolume, xF86XK_AudioMute, xF86XK_MonBrightnessDown, xF86XK_MonBrightnessUp, xF86XK_AudioPlay, xF86XK_AudioPrev, xF86XK_AudioNext)
 import XMonad.Hooks.EwmhDesktops ( ewmh, ewmhFullscreen )
-import Control.Monad ( join, when )
 import qualified XMonad.Actions.PhysicalScreens as PS
 import XMonad.Hooks.Rescreen ( addAfterRescreenHook, setRescreenWorkspacesHook )
 import XMonad.Layout.NoBorders
-import XMonad.Hooks.ManageDocks
-    ( avoidStruts, docks, manageDocks )
+import XMonad.Hooks.ManageDocks ( avoidStruts, docks )
 import XMonad.Util.Types ( Direction2D(..) )
-import XMonad.Hooks.ManageHelpers ( doFullFloat, isFullscreen, isInProperty )
+import XMonad.Hooks.ManageHelpers ( doCenterFloat, doFullFloat, isDialog, isFullscreen, isInProperty )
+import XMonad.Util.Hacks ( windowedFullscreenFixEventHook )
 import XMonad.Layout.Spacing ( spacingRaw, Border(Border) )
 import XMonad.Layout.PerScreen
 import XMonad.Layout.Column
@@ -39,7 +36,6 @@ import XMonad.Layout.Gaps
 
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
-import Data.Maybe (maybeToList)
 import Data.List (intercalate)
 import Data.Bits ((.&.))
 -- The preferred terminal program, which is used in a binding below and by
@@ -83,22 +79,6 @@ myWorkspaces    = ["\63083", "\63288", "\63306", "\61723", "\63107", "\63601", "
 --
 myNormalBorderColor  = "#3b4252"
 myFocusedBorderColor = "#bc96da"
-
-addNETSupported :: Atom -> X ()
-addNETSupported x   = withDisplay $ \dpy -> do
-    r               <- asks theRoot
-    a_NET_SUPPORTED <- getAtom "_NET_SUPPORTED"
-    a               <- getAtom "ATOM"
-    liftIO $ do
-       sup <- (join . maybeToList) <$> getWindowProperty32 dpy a_NET_SUPPORTED r
-       when (fromIntegral x `notElem` sup) $
-         changeProperty32 dpy r a_NET_SUPPORTED a propModeAppend [fromIntegral x]
-
-addEWMHFullscreen :: X ()
-addEWMHFullscreen   = do
-    wms <- getAtom "_NET_WM_STATE"
-    wfs <- getAtom "_NET_WM_STATE_FULLSCREEN"
-    mapM_ addNETSupported [wms, wfs]
 
 ------------------------------------------------------------------------
 -- Key bindings. Add, modify or remove key bindings here.
@@ -383,12 +363,10 @@ rectCentered percentage = W.RationalRect offset offset percentage percentage
 -- To match on the WM_NAME, you can use 'title' in the same way that
 -- 'className' and 'resource' are used below.
 --
-myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+> manageDocks <+> composeAll
+myManageHook = namedScratchpadManageHook scratchpads <+> composeAll
     [ isInProperty "_NET_WM_WINDOW_TYPE" "_NET_WM_WINDOW_TYPE_POPUP_MENU" --> doIgnore
     , isInProperty "_NET_WM_WINDOW_TYPE" "_NET_WM_WINDOW_TYPE_MENU"       --> doIgnore
-    , className =? "MPlayer"        --> doFloat
-    , resource  =? "desktop_window" --> doIgnore
-    , resource  =? "kdesktop"       --> doIgnore
+    , isDialog     --> doCenterFloat
     , isFullscreen --> doFullFloat
     ]
 
@@ -398,7 +376,7 @@ myManageHook = fullscreenManageHook <+> namedScratchpadManageHook scratchpads <+
 -- Perform an arbitrary action on each internal state change or X event.
 -- See the 'XMonad.Hooks.DynamicLog' extension for examples.
 --
-myLogHook = updatePointer (0.5, 0.5) (0, 0)
+myLogHook = updatePointer (0.5, 0.5) (0, 0) >> nsSingleScratchpadPerWorkspace scratchpads
 
 ------------------------------------------------------------------------
 -- Startup hook
@@ -426,7 +404,7 @@ myStartupHook = do
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
-main = xmonad $ fullscreenSupport $ addAfterRescreenHook restartBars $ setRescreenWorkspacesHook (PS.rescreen def) $
+main = xmonad $ addAfterRescreenHook restartBars $ setRescreenWorkspacesHook (PS.rescreen def) $
     docks $ ewmhFullscreen $ ewmh defaults
 
 -- The bars are sized to the screens they started on, so they restart with the outputs.
@@ -457,6 +435,7 @@ defaults = def {
       -- hooks, layouts
         manageHook = myManageHook,
         layoutHook = myLayout,
+        handleEventHook    = windowedFullscreenFixEventHook,
         logHook            = myLogHook,
-        startupHook        = myStartupHook >> addEWMHFullscreen
+        startupHook        = myStartupHook
     }
