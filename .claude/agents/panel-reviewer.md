@@ -16,7 +16,7 @@ language in the brief, or the roster the brief names.
 - Read the target yourself from the paths in the brief.
 - Never edit the work under review. Write is for probe scripts only, saved in the
   directory the brief names or the repo's scratch directory.
-- Never run git. Findings go in the report, never in a file.
+- Never run a git command that writes. Findings go in the report, never in a file.
 - Run test files by path. A directory run can skip tagged files.
 - Check the claims. For code, run the tests and write probes that try to break the
   acceptance criteria when the brief asks for that depth. For a plan or research, check
