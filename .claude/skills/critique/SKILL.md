@@ -13,7 +13,11 @@ argument-hint: <path, PR number, or "staged">
 2. **Search mempalace** for earlier decisions on the same code or topic
    (`~/.claude/reference/mempalace.md`). Note the ones a reviewer should know.
 3. **Spawn `panel-reviewer`.** Pass the target paths, the language, the repo `CLAUDE.md`
-   path, and the earlier decisions. Pass paths, never pasted content.
+   path, and the earlier decisions. Pass paths, never pasted content. For code, ask for
+   the naming pass in `principles.md` over classes, modules, methods, arguments, and
+   variables. For a path target that covers every name in it; for a diff, the names it
+   adds or changes.
 4. **Report.** Read `~/.claude/reference/writing-style.md`. Give the findings ranked
-   BLOCKER, SHOULD-FIX, NIT, each with its persona, then 1 verdict. Change nothing unless
-   asked.
+   BLOCKER, SHOULD-FIX, NIT, each with its persona, then 1 verdict. Naming findings keep
+   their ranked candidate names and the 1 line reason for the first. Change nothing
+   unless asked.
