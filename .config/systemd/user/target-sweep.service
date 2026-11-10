@@ -1,0 +1,9 @@
+[Unit]
+Description=Remove cargo target dirs idle 14 days under ~/dev and ~/src
+Documentation=https://github.com/liaden/junk-drawer/tree/main/target-sweep
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=%h/.local/bin/target-sweep
