@@ -1,0 +1,90 @@
+onboarding = false
+
+[theme]
+name = "terminal"
+
+# mise manages the version
+[update]
+version_check = false
+
+[keys]
+prefix = "ctrl+space"
+next_tab = "prefix+]"
+previous_tab = "prefix+["
+next_agent = "prefix+."
+previous_agent = "prefix+,"
+focus_agent = "prefix+alt+1..9"
+
+[[keys.command]]
+key = "prefix+n"
+type = "popup"
+command = "$HOME/bin/claude-next"
+width = "70%"
+height = "30%"
+
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "$HOME/bin/claude-next open"
+width = "90%"
+height = "90%"
+
+[[keys.command]]
+key = "prefix+a"
+type = "popup"
+command = "hopper-add-popup"
+width = "60%"
+height = "30%"
+
+[[keys.command]]
+key = "prefix+shift+v"
+type = "popup"
+command = "review-pr --pick"
+width = "70%"
+height = "40%"
+
+[[keys.command]]
+key = "prefix+d"
+type = "popup"
+command = "day-brief"
+width = "80%"
+height = "80%"
+
+[ui]
+agent_panel_sort = "priority"
+status_indicators = "symbols"
+
+# claude-session-hook already notifies on permission prompts
+[ui.toast]
+delivery = "off"
+
+# a silent done.mp3 keeps sound for needs-input only
+[ui.sound]
+done_path = "sounds/silent.mp3"
+
+[[keys.command]]
+key = "prefix+m"
+type = "popup"
+command = "$HOME/bin/herdr-park"
+width = "70%"
+height = "20%"
+
+[[keys.command]]
+key = "prefix+shift+i"
+type = "popup"
+command = "$HOME/bin/herdr-park incident"
+width = "70%"
+height = "25%"
+
+[[keys.command]]
+key = "prefix+i"
+type = "popup"
+command = "feed query --since-days 2 | less -S"
+width = "90%"
+height = "70%"
+
+[ui.sidebar.spaces]
+rows = [["state_icon", "workspace"], ["branch", "git_status"], ["$parked"]]
+
+[ui.sidebar.agents.rows_by_agent]
+claude = [["state_icon", "workspace", "tab"], ["$task"], ["$finished"]]

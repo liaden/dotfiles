@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# herdr-park [incident]: run from a herdr popup. Parks the focused workspace with a note
+# (empty note unparks), or parks it and opens a new workspace for an incident.
+# The feed record is the lasting copy: herdr drops workspace tokens on restart.
+set -euo pipefail
+
+pane_json=$(herdr pane current)
+workspace=$(jq -r '.result.pane.workspace_id' <<<"$pane_json")
+cwd=$(jq -r '.result.pane.foreground_cwd // .result.pane.cwd' <<<"$pane_json")
+label=$(herdr workspace get "$workspace" | jq -r '.result.workspace.label')
+branch=$(git -C "$cwd" branch --show-current 2>/dev/null || true)
+
+log() { # event title body workspace-label
+  feed add herdr "$2" "$3" --meta "$(jq -cn --arg event "$1" --arg workspace "$4" \
+    --arg cwd "$cwd" --arg branch "$branch" \
+    '{event: $event, workspace: $workspace, cwd: $cwd, branch: $branch}')" >/dev/null
+}
+
+park() { # note
+  herdr workspace report-metadata "$workspace" --source herdr-park --token "parked=$1" >/dev/null
+  log parked "parked: $label" "$1" "$label"
+}
+
+if [[ ${1:-} == incident ]]; then
+  printf "%s" "Incident name (empty cancels): "; read -r incident || true
+  [[ -n $incident ]] || exit 0
+  printf "%s" "Where you were in $label, and what's next: "; read -r note || true
+  park "${note:-interrupted by incident: $incident}"
+  root_pane=$(herdr workspace create --cwd "$cwd" --label "$incident" --focus |
+    jq -r '.result.root_pane.pane_id')
+  herdr pane run "$root_pane" claude >/dev/null
+  log incident "incident: $incident" "" "$incident"
+  exit 0
+fi
+
+printf "%s" "Park $label. Why, and what's next? (empty unparks): "; read -r note || true
+if [[ -n $note ]]; then
+  park "$note"
+else
+  herdr workspace report-metadata "$workspace" --source herdr-park --clear-token parked >/dev/null
+  log unparked "unparked: $label" "" "$label"
+fi

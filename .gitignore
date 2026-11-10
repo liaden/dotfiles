@@ -166,6 +166,9 @@ VirtualBox VMs
 .claude/*
 !.claude/settings.json
 !.claude/statusline-command.sh
+!.claude/hooks/
+.claude/hooks/*
+!.claude/hooks/herdr-agent-state.sh
 !.claude/CLAUDE.md
 !.claude/agents/
 !.claude/reference/

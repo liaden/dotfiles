@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# claude-next [open]: run from a herdr popup on a Claude pane. Finds the last research
+# report, profiling report, or plan that Claude named, then runs /clear and the next
+# skill on it, or opens it in nvim.
+set -euo pipefail
+
+die() {
+  echo "$*"
+  IFS= read -rsn1 _ || true
+  exit 1
+}
+
+next_command() { # cwd path
+  local cwd=$1 path=$2 shown=$2 status
+  [[ $path == "$cwd"/* ]] && shown=${path#"$cwd"/}
+  case ${path##*/} in
+    *-research-*.md | *-profiling-*.md)
+      echo "/create-plan $shown"
+      return
+      ;;
+  esac
+  status=$(grep -m1 -oE '^status: *[a-z-]+' "$path" 2>/dev/null | sed 's/^status: *//') || true
+  case $status in
+    draft | in-progress) echo "/execute-plan $shown" ;;
+    done) echo "/critique $shown" ;;
+  esac
+}
+
+mentioned_paths() { # transcript
+  jq -r 'select(.type == "assistant") | .message.content[]? | select(.type == "text") | .text' "$1" \
+    | grep -oE '[[:alnum:]_.~/-]+\.md' || true
+}
+
+resolve() { # cwd path
+  case $2 in
+    \~/*) echo "$HOME/${2#\~/}" ;;
+    /*) echo "$2" ;;
+    *) echo "$1/$2" ;;
+  esac
+}
+
+find_artifact() { # cwd transcript
+  local cwd=$1 transcript=$2 path
+  if [[ -f $transcript ]]; then
+    while IFS= read -r path; do
+      path=$(resolve "$cwd" "$path")
+      if [[ -f $path && -n $(next_command "$cwd" "$path") ]]; then
+        echo "$path"
+        return
+      fi
+    done < <(mentioned_paths "$transcript" | tac)
+  fi
+  while IFS= read -r path; do
+    if [[ -n $(next_command "$cwd" "$path") ]]; then
+      echo "$path"
+      return
+    fi
+  done < <(ls -td -- "$cwd"/planning/*.md "$cwd"/*.md 2>/dev/null)
+}
+
+agent_field() { # pane jq-path
+  herdr agent get "$1" | jq -r ".result.agent$2 // empty"
+}
+
+main() {
+  local mode=${1:-run} pane_json pane cwd sid status transcript artifact cmd key
+  pane_json=$(herdr pane current)
+  pane=$(jq -r '.result.pane.pane_id' <<<"$pane_json")
+  cwd=$(jq -r '.result.pane.foreground_cwd // .result.pane.cwd' <<<"$pane_json")
+  [[ $(agent_field "$pane" .agent) == claude ]] || die "The focused pane is not running Claude."
+
+  sid=$(agent_field "$pane" .agent_session.value)
+  transcript=""
+  [[ -n $sid ]] && transcript=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" \
+    -maxdepth 2 -name "$sid.jsonl" -print -quit 2>/dev/null)
+  artifact=$(find_artifact "$cwd" "$transcript")
+  [[ -n $artifact ]] || die "No research report, profiling report, or plan found for $cwd."
+
+  if [[ $mode == open ]]; then
+    exec nvim "$artifact"
+  fi
+
+  status=$(agent_field "$pane" .agent_status)
+  [[ $status == "idle" || $status == "done" ]] || die "Claude is $status. Try again once it is idle."
+
+  cmd=$(next_command "$cwd" "$artifact")
+  printf 'Claude in %s (%s) will run:\n  /clear\n  %s\n\nEnter to run, any other key to cancel\n' \
+    "${cwd##*/}" "$pane" "$cmd"
+  IFS= read -rsn1 key || exit 0
+  [[ -z $key ]] || exit 0
+
+  herdr agent prompt "$pane" /clear >/dev/null
+  # herdr's --wait stalls on /clear because Claude never shows as working; the
+  # integration hook reports a new session id once the clear is done.
+  for _ in {1..50}; do
+    [[ $(agent_field "$pane" .agent_session.value) != "$sid" ]] && break
+    sleep 0.2
+  done
+  [[ $(agent_field "$pane" .agent_session.value) != "$sid" ]] ||
+    die "/clear did not finish in 10 s. Run this yourself: $cmd"
+  herdr agent prompt "$pane" "$cmd" >/dev/null
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  main "$@"
+fi
