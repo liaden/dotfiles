@@ -17,6 +17,7 @@ focus_agent = "prefix+alt+1..9"
 
 [[keys.command]]
 key = "prefix+n"
+description = "Claude: run next skill on last report"
 type = "popup"
 command = "$HOME/bin/claude-next"
 width = "70%"
@@ -24,6 +25,7 @@ height = "30%"
 
 [[keys.command]]
 key = "prefix+f"
+description = "Claude: open last report in nvim"
 type = "popup"
 command = "$HOME/bin/claude-next open"
 width = "90%"
@@ -31,6 +33,7 @@ height = "90%"
 
 [[keys.command]]
 key = "prefix+a"
+description = "Add item to hopper"
 type = "popup"
 command = "hopper-add-popup"
 width = "60%"
@@ -38,6 +41,7 @@ height = "30%"
 
 [[keys.command]]
 key = "prefix+shift+v"
+description = "Pick a PR to review"
 type = "popup"
 command = "review-pr --pick"
 width = "70%"
@@ -45,6 +49,7 @@ height = "40%"
 
 [[keys.command]]
 key = "prefix+d"
+description = "Day brief"
 type = "popup"
 command = "day-brief"
 width = "80%"
@@ -64,6 +69,7 @@ done_path = "sounds/silent.mp3"
 
 [[keys.command]]
 key = "prefix+m"
+description = "Park or unpark workspace"
 type = "popup"
 command = "$HOME/bin/herdr-park"
 width = "70%"
@@ -71,6 +77,7 @@ height = "20%"
 
 [[keys.command]]
 key = "prefix+shift+i"
+description = "Park and open incident workspace"
 type = "popup"
 command = "$HOME/bin/herdr-park incident"
 width = "70%"
@@ -78,6 +85,7 @@ height = "25%"
 
 [[keys.command]]
 key = "prefix+i"
+description = "Feed: last 2 days"
 type = "popup"
 command = "feed query --since-days 2 | less -S"
 width = "90%"
