@@ -194,3 +194,8 @@ __pycache__/
 .xmonad/xmonad.errors
 .xmonad/build-*/
 .xsessions-errors*
+
+# herdr: config and sounds are authored; sessions and plugin state are runtime
+.config/herdr/*
+!.config/herdr/config.toml
+!.config/herdr/sounds/

@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""herdr-pr-watch: for each parked herdr workspace, check its pull request with gh.
+
+Shows the PR state on the workspace, logs changes to the morning feed, and raises a
+herdr notification when a change needs you. Run by a systemd timer.
+"""
+import json
+import pathlib
+import subprocess
+
+STATE_FILE = pathlib.Path.home() / ".local/state/herdr-pr-watch/state.json"
+PR_FIELDS = "number,state,reviewDecision,url,statusCheckRollup,latestReviews"
+FAILED = {"FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE", "ERROR"}
+REVIEW_TEXT = {"APPROVED": "approved", "CHANGES_REQUESTED": "changes requested",
+               "REVIEW_REQUIRED": "awaiting review"}
+
+
+def parked_workspaces(snapshot):
+    snap = snapshot["result"]["snapshot"]
+    folders = {}
+    for pane in snap.get("panes", []):
+        folders.setdefault(pane["workspace_id"], pane.get("foreground_cwd") or pane.get("cwd"))
+    return [{"id": w["workspace_id"], "label": w.get("label") or w["workspace_id"],
+             "cwd": folders[w["workspace_id"]], "note": w["tokens"]["parked"]}
+            for w in snap.get("workspaces", [])
+            if (w.get("tokens") or {}).get("parked") and folders.get(w["workspace_id"])]
+
+
+def ci_state(checks):
+    if not checks:
+        return "none"
+    outcomes = {c.get("conclusion") or c.get("state") or "" for c in checks}
+    if outcomes & FAILED:
+        return "failed"
+    running = any(c.get("status") not in (None, "COMPLETED") or c.get("state") in ("PENDING", "EXPECTED")
+                  for c in checks)
+    return "running" if running else "passed"
+
+
+def summarize(pr):
+    return {"number": pr["number"], "state": pr["state"], "url": pr.get("url"),
+            "review": pr.get("reviewDecision") or "", "reviews": len(pr.get("latestReviews") or []),
+            "ci": ci_state(pr.get("statusCheckRollup") or [])}
+
+
+def changes(before, after):
+    """Return [(text, needs you)] for what changed between 2 summaries."""
+    if before is None:
+        return []
+    found = []
+    if after["state"] != before["state"] and after["state"] in ("MERGED", "CLOSED"):
+        found.append((after["state"].lower(), False))
+    if after["review"] != before["review"] and after["review"] in ("APPROVED", "CHANGES_REQUESTED"):
+        found.append((REVIEW_TEXT[after["review"]], True))
+    elif after["reviews"] > before["reviews"]:
+        found.append(("new review", True))
+    if after["ci"] != before["ci"] and after["ci"] in ("failed", "passed"):
+        found.append((f"CI {after['ci']}", after["ci"] == "failed"))
+    return found
+
+
+def token(summary):
+    if summary["state"] in ("MERGED", "CLOSED"):
+        parts = [summary["state"].lower()]
+    else:
+        parts = [REVIEW_TEXT.get(summary["review"], "")]
+        if summary["ci"] != "none":
+            parts.append(f"CI {summary['ci']}")
+    text = ", ".join(p for p in parts if p)
+    return f"PR #{summary['number']}: {text}" if text else f"PR #{summary['number']}"
+
+
+def plan(snapshot, state, fetch):
+    """Return (new state by folder, actions) for the parked workspaces."""
+    new_state, actions = {}, []
+    for workspace in parked_workspaces(snapshot):
+        pr = fetch(workspace["cwd"])
+        if pr is None:
+            continue
+        summary = summarize(pr)
+        new_state[workspace["cwd"]] = summary
+        actions.append({"kind": "token", "workspace": workspace["id"], "text": token(summary)})
+        for text, needs_you in changes(state.get(workspace["cwd"]), summary):
+            title = f"{workspace['label']}: {text}"
+            actions.append({"kind": "feed", "title": title, "body": workspace["note"],
+                            "meta": {"event": "pr", "workspace": workspace["label"],
+                                     "cwd": workspace["cwd"], "url": summary["url"]}})
+            if needs_you:
+                actions.append({"kind": "notify", "title": title, "body": summary["url"]})
+    return new_state, actions
+
+
+def fetch_pr(cwd):
+    out = subprocess.run(["gh", "pr", "view", "--json", PR_FIELDS], cwd=cwd,
+                         capture_output=True, text=True, timeout=30, check=False)
+    return json.loads(out.stdout) if out.returncode == 0 else None
+
+
+def apply(action):
+    if action["kind"] == "token":
+        command = ["herdr", "workspace", "report-metadata", action["workspace"],
+                   "--source", "herdr-pr-watch", "--token", f"pr={action['text']}"]
+    elif action["kind"] == "feed":
+        command = ["feed", "add", "herdr", action["title"], action["body"],
+                   "--meta", json.dumps(action["meta"])]
+    else:
+        command = ["herdr", "notification", "show", action["title"], "--body", action["body"]]
+    subprocess.run(command, capture_output=True, check=False)
+
+
+def main():
+    out = subprocess.run(["herdr", "api", "snapshot"], capture_output=True, text=True,
+                         timeout=10, check=False)
+    if out.returncode != 0:
+        return
+    try:
+        state = json.loads(STATE_FILE.read_text())
+    except (OSError, ValueError):
+        state = {}
+    new_state, actions = plan(json.loads(out.stdout), state, fetch_pr)
+    for action in actions:
+        apply(action)
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(json.dumps(new_state))
+
+
+if __name__ == "__main__":
+    main()

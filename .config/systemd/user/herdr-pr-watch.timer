@@ -1,0 +1,9 @@
+[Unit]
+Description=Check pull requests of parked herdr workspaces every 2 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

@@ -84,7 +84,7 @@ width = "90%"
 height = "70%"
 
 [ui.sidebar.spaces]
-rows = [["state_icon", "workspace"], ["branch", "git_status"], ["$parked"]]
+rows = [["state_icon", "workspace"], ["branch", "git_status"], ["$parked"], ["$pr"]]
 
 [ui.sidebar.agents.rows_by_agent]
 claude = [["state_icon", "workspace", "tab"], ["$task"], ["$finished"]]
