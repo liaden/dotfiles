@@ -1,87 +1,96 @@
-#!/usr/bin/env python3
-"""herdr-feed-log: append "needs you" and "finished" agent events to the morning feed.
+#!/usr/bin/env ruby
+# frozen_string_literal: true
 
-Polls the herdr snapshot because a herdr event subscription needs 1 connection per
-pane and drops a connection that subscribes twice.
-"""
-import json
-import subprocess
-import sys
-import time
+# herdr-feed-log: append "needs you" and "finished" agent events to the morning feed.
+# Polls the herdr snapshot because a herdr event subscription needs 1 connection per
+# pane and drops a connection that subscribes twice.
 
-POLL_SECONDS = 3
-RETRY_SECONDS = 10
-TITLES = {"needs-you": "needs you", "finished": "finished"}
+require "json"
+require "open3"
 
+module HerdrFeedLog
+  POLL_SECONDS = 3
+  RETRY_SECONDS = 10
+  TITLES = { "needs-you" => "needs you", "finished" => "finished" }.freeze
 
-def transitions(statuses, snapshot):
-    """Return (new statuses by pane id, events) for panes running an agent."""
-    snap = snapshot["result"]["snapshot"]
-    labels = {w["workspace_id"]: w.get("label") for w in snap.get("workspaces", [])}
-    current, events = {}, []
-    for pane in snap.get("panes", []):
-        if not pane.get("agent"):
-            continue
-        pane_id, status = pane["pane_id"], pane.get("agent_status")
-        current[pane_id] = status
-        before = statuses.get(pane_id)
-        if before is None or before == status:
-            continue
-        if status == "blocked":
-            kind = "needs-you"
-        elif before == "working" and status in ("idle", "done"):
-            kind = "finished"
-        else:
-            continue
-        events.append({"event": kind, "pane": pane,
-                       "workspace": labels.get(pane["workspace_id"]) or pane["workspace_id"]})
-    return current, events
+  class SnapshotError < StandardError; end
 
+  module_function
 
-def record(event):
-    """Return the feed (title, body, meta) for an event."""
-    pane = event["pane"]
-    meta = {"event": event["event"], "workspace": event["workspace"],
-            "pane": pane["pane_id"], "cwd": pane.get("cwd"), "agent": pane.get("agent")}
-    body = (pane.get("tokens") or {}).get("task", "")
-    return f"{TITLES[event['event']]}: {event['workspace']}", body, meta
+  # Returns [statuses by pane id, events] for panes running an agent.
+  def transitions(statuses, snapshot)
+    snap = snapshot.dig("result", "snapshot")
+    labels = snap.fetch("workspaces", []).to_h { |w| [w["workspace_id"], w["label"]] }
+    current = {}
+    events = []
+    snap.fetch("panes", []).each do |pane|
+      next unless pane["agent"]
 
+      pane_id, status = pane.values_at("pane_id", "agent_status")
+      current[pane_id] = status
+      kind = event_kind(statuses[pane_id], status) or next
+      events << { event: kind, pane:,
+                  workspace: labels[pane["workspace_id"]] || pane["workspace_id"] }
+    end
+    [current, events]
+  end
 
-def read_snapshot():
-    out = subprocess.run(["herdr", "api", "snapshot"], capture_output=True, text=True,
-                         check=True, timeout=10)
-    return json.loads(out.stdout)
+  def event_kind(before, status)
+    return if before.nil? || before == status
+    return "needs-you" if status == "blocked"
 
+    # blocked -> idle means it worked and finished between 2 polls
+    "finished" if %w[working blocked].include?(before) && %w[idle done].include?(status)
+  end
 
-def poll_once(statuses, last_error, read, add, report):
-    """Return (statuses, last error, seconds to wait) after 1 poll."""
-    try:
-        statuses, events = transitions(statuses, read())
-    except (subprocess.SubprocessError, OSError, ValueError, KeyError) as error:
-        if str(error) != last_error:
-            report(f"herdr-feed-log: {error}")
-        return {}, str(error), RETRY_SECONDS
-    for event in events:
-        add(*record(event))
-    return statuses, None, POLL_SECONDS
+  # Returns the feed [title, body, meta] for an event.
+  def record(event)
+    pane = event[:pane]
+    meta = { event: event[:event], workspace: event[:workspace], pane: pane["pane_id"],
+             cwd: pane["cwd"], agent: pane["agent"] }
+    title = "#{TITLES.fetch(event[:event])}: #{event[:workspace]}"
+    [title, (pane["tokens"] || {}).fetch("task", ""), meta]
+  end
 
+  # Returns [statuses, last error, seconds to wait] after 1 poll.
+  def poll_once(statuses, last_error, read, add:, report:)
+    statuses, events = transitions(statuses, read.call)
+    events.each { |event| add.call(*record(event)) }
+    [statuses, nil, POLL_SECONDS]
+  rescue SnapshotError => e
+    report.call("herdr-feed-log: #{e.message}") unless e.message == last_error
+    [{}, e.message, RETRY_SECONDS]
+  end
 
-def add_to_feed(title, body, meta):
-    subprocess.run(["feed", "add", "herdr", title, body, "--meta", json.dumps(meta)],
-                   capture_output=True, check=False)
+  def read_snapshot
+    out, err, status = Open3.capture3("herdr", "api", "snapshot")
+    raise SnapshotError, snapshot_failure(err, status) unless status.success?
 
+    # systemd passes no LANG, so captured output arrives tagged US-ASCII.
+    JSON.parse(out.force_encoding(Encoding::UTF_8))
+  rescue JSON::ParserError, SystemCallError => e
+    raise SnapshotError, e.message
+  end
 
-def report_error(message):
-    print(message, file=sys.stderr, flush=True)
+  def snapshot_failure(err, status)
+    err.strip.empty? ? "herdr api snapshot exited #{status.exitstatus}" : err.strip
+  end
 
+  def add_to_feed(title, body, meta)
+    system("feed", "add", "herdr", title, body, "--meta", JSON.generate(meta),
+           out: File::NULL, err: File::NULL)
+  end
 
-def main():
-    statuses, last_error = {}, None
-    while True:
-        statuses, last_error, wait = poll_once(statuses, last_error, read_snapshot,
-                                               add_to_feed, report_error)
-        time.sleep(wait)
+  def main
+    statuses = {}
+    last_error = nil
+    report = ->(message) { warn message }
+    loop do
+      statuses, last_error, wait = poll_once(statuses, last_error, method(:read_snapshot),
+                                             add: method(:add_to_feed), report:)
+      sleep wait
+    end
+  end
+end
 
-
-if __name__ == "__main__":
-    main()
+HerdrFeedLog.main if $PROGRAM_NAME == __FILE__

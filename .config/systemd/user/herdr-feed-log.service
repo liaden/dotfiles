@@ -3,7 +3,8 @@ Description=Log herdr agent "needs you" and "finished" events to the morning fee
 
 [Service]
 Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:%h/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/usr/bin/python3 -I %h/bin/herdr-feed-log
+WorkingDirectory=%h
+ExecStart=%h/bin/herdr-feed-log
 Restart=always
 RestartSec=10
 
