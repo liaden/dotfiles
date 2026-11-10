@@ -23,9 +23,9 @@ cwd="$(jq -r '.cwd // empty' <<<"$input")"
 branch=""
 [ -n "$cwd" ] && branch="$(git -C "$cwd" branch --show-current 2>/dev/null || true)"
 
-# Window label: Linear issue id if the branch follows Linear's naming
-# (joel/eng-123-slug), else branch, else directory.
-label="$(grep -oiE '[a-z]{2,5}-[0-9]+' <<<"$branch" | head -n 1 || true)"
+# Window label: issue key from the branch (Jira PLATFORM-1234, Linear eng-123),
+# else branch, else directory.
+label="$(grep -oiE '[a-z][a-z0-9]{1,9}-[0-9]+' <<<"$branch" | head -n 1 || true)"
 [ -n "$label" ] || label="$branch"
 [ -n "$label" ] || label="$(basename "${cwd:-claude}")"
 
@@ -52,19 +52,52 @@ notify() {
   fi
 }
 
+herdr_meta() { # report-metadata args...
+  [ -n "${HERDR_PANE_ID:-}" ] && command -v herdr >/dev/null || return 0
+  herdr pane report-metadata "$HERDR_PANE_ID" --source claude-session-hook "$@" >/dev/null 2>&1 || true
+}
+
+other_plan_runs() { # labels of other live sessions in /execute-plan
+  local f pid
+  for f in "$STATE_DIR"/*.json; do
+    [ -e "$f" ] && [ "$f" != "$state" ] || continue
+    jq -e '.status == "working" and ((.task // "") | startswith("/execute-plan"))' "$f" >/dev/null || continue
+    pid="$(jq -r '.pid // 0' "$f")"
+    kill -0 "$pid" 2>/dev/null && jq -r '.label' "$f"
+  done
+  return 0
+}
+
+# Parallel landings load the machine and flake suites (friction log, kind flaky).
+warn_parallel_plan() {
+  local others msg
+  others="$(other_plan_runs | paste -sd, -)"
+  [ -n "$others" ] || return 0
+  msg="/execute-plan already running in $others; 2 runs on 1 machine flake tests"
+  if [ -n "${HERDR_PANE_ID:-}" ] && command -v herdr >/dev/null; then
+    herdr notification show "$label: parallel /execute-plan" --body "$msg" >/dev/null 2>&1 || true
+  else
+    notify "$label: $msg"
+  fi
+}
+
 case "$event" in
   SessionStart)
     update '.status="idle" | .started_at=$now'
     tmux_glyph "○"
+    herdr_meta --clear-token task --clear-token finished
     ;;
   UserPromptSubmit)
     task="$(jq -r '(.prompt // "") | split("\n")[0] | .[0:80]' <<<"$input")"
     update '.status="working" | .prompt_at=$now | .task=$task' --arg task "$task"
     tmux_glyph "✳"
+    herdr_meta --token "task=$task" --clear-token finished
+    case "$task" in /execute-plan*) warn_parallel_plan ;; esac
     ;;
   Stop)
     update '.status="idle" | .stopped_at=$now'
     tmux_glyph "✓"
+    herdr_meta --token "finished=done $(date +%H:%M)"
     ;;
   Notification)
     # Only permission requests get a popup; idle "waiting for input" nudges
