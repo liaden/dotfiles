@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# tmux-fzf-url for herdr: pick links on the screen of the pane under the popup and open them.
+set -euo pipefail
+
+pane=${HERDR_ACTIVE_PANE_ID:?herdr-fzf-url: HERDR_ACTIVE_PANE_ID is unset; run it from a herdr popup}
+herdr=${HERDR_BIN_PATH:-herdr}
+plugin=~/.config/tmux/plugins/tmux-fzf-url/fzf-url.sh
+
+if [[ ! -f $plugin ]]; then
+  echo "herdr-fzf-url: needs tmux-fzf-url at $plugin (install it with tpm)" >&2
+  exit 1
+fi
+# The plugin's test guard stops it before its tmux-only main, so herdr and tmux
+# share its link patterns, xre install, opener and clipboard choice.
+__FZF_URL_TESTING=1 source "$plugin"
+ensure_xre
+
+urls=$("$herdr" pane read "$pane" --source visible | xre_extract | awk '!seen[$0]++')
+if [[ -z $urls ]]; then
+  echo "herdr-fzf-url: no URLs found"
+  [[ -t 1 ]] && sleep 1
+  exit 0
+fi
+
+custom_open=
+copy_cmd=$(get_copy_cmd "")
+fzf --multi --exit-0 --no-preview \
+  --header 'enter: open, tab: select, ctrl-y: copy' \
+  --bind "ctrl-y:execute-silent(printf '%s\n' {+} | $copy_cmd)+abort" <<<"$urls" |
+  while read -r url; do
+    open_url "$url" &>/dev/null
+  done
