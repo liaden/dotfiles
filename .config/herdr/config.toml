@@ -55,6 +55,12 @@ command = "day-brief"
 width = "80%"
 height = "80%"
 
+[[keys.command]]
+key = "prefix+shift+q"
+description = "Quit herdr (stop server)"
+type = "shell"
+command = "herdr server stop"
+
 [ui]
 agent_panel_sort = "priority"
 status_indicators = "symbols"
