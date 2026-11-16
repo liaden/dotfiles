@@ -13,7 +13,7 @@ elif [[ -d /opt/homebrew/opt/fzf ]]; then
 
   # Key bindings
   # ------------
-  source "/usr/local/opt/fzf/shell/key-bindings.zsh"
+  source "/opt/homebrew/opt/fzf/shell/key-bindings.zsh"
 elif [[ -d /home/linuxbrew/.linuxbrew/opt/fzf ]]; then
   # Auto-completion
   # ---------------

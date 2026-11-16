@@ -115,7 +115,9 @@
       "Bash(mempalace wake-up *)",
       "Bash(mempalace status)",
       "Read(~/.claude/reference/**)",
-      "Bash(echo * >> ~/.claude/friction/*)"
+      "Bash(echo * >> ~/.claude/friction/*)",
+      "Read(~/.local/share/plans/**)",
+      "Edit(~/.local/share/plans/**)"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -132,10 +134,81 @@
       "Bash(shutdown*)",
       "Bash(reboot*)",
       "Bash(poweroff*)"
+    ],
+    "additionalDirectories": [
+      "~/.local/share/plans"
     ]
   },
-  "model": "opus[1m]",
+  "model": "opus",
   "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook Notification",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook SessionEnd",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
@@ -143,6 +216,14 @@
             "type": "command",
             "command": "~/bin/claude-session-hook SessionStart",
             "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
           }
         ]
       },
@@ -157,17 +238,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/bin/claude-session-hook UserPromptSubmit",
-            "async": true
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
@@ -177,26 +247,51 @@
             "async": true
           }
         ]
-      }
-    ],
-    "Notification": [
+      },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "~/bin/claude-session-hook Notification",
-            "async": true
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
           }
         ]
       }
     ],
-    "SessionEnd": [
+    "StopFailure": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "~/bin/claude-session-hook SessionEnd",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-hook UserPromptSubmit",
             "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/joel.johnson/.iterm2/cc-status"
           }
         ]
       }
@@ -209,11 +304,11 @@
     "refreshInterval": 10
   },
   "enabledPlugins": {
-    "frontend-design@claude-plugins-official": true,
-    "rust-analyzer-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true,
-    "ruby-lsp@claude-plugins-official": true
+    "frontend-design@claude-plugins-official": true,
+    "ruby-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
   },
   "effortLevel": "high",
   "awaySummaryEnabled": false,

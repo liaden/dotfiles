@@ -114,10 +114,14 @@ return {
         },
       })
 
-      -- Ruby LSP uses asdf to select the project runtime. Ruby LSP manages its
-      -- composed bundle itself, so do not wrap the server with bundle exec. Clear
-      -- stale chruby variables before asdf selects the project runtime.
-      local ruby_lsp_cmd = {
+      -- Ruby LSP uses mise (or asdf, where mise is absent) to select the project
+      -- runtime -- same precedence as .zshrc. Ruby LSP manages its composed
+      -- bundle itself, so do not wrap the server with bundle exec. Clear stale
+      -- chruby variables before the version manager selects the project runtime.
+      local version_exec = vim.fn.executable('mise') == 1
+          and { 'mise', 'exec', '--' }
+          or { 'asdf', 'exec' }
+      local ruby_lsp_cmd = vim.list_extend({
         'env',
         '-u', 'GEM_HOME',
         '-u', 'GEM_PATH',
@@ -125,8 +129,7 @@ return {
         '-u', 'RUBY_ROOT',
         '-u', 'RUBY_ENGINE',
         '-u', 'RUBY_VERSION',
-        'asdf', 'exec', 'ruby-lsp',
-      }
+      }, vim.list_extend(version_exec, { 'ruby-lsp' }))
       vim.lsp.config('ruby_lsp', {
         cmd = function(dispatchers, config)
           return vim.lsp.rpc.start(ruby_lsp_cmd, dispatchers, { cwd = config.root_dir })

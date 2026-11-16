@@ -9,7 +9,7 @@
 # Scheduled daily via ~/Library/LaunchAgents/com.morning.update.plist.
 set -uo pipefail   # not -e: one failing step shouldn't skip the rest
 
-LOG_DIR="$HOME/.config/morning-update/logs"
+LOG_DIR="$HOME/.local/state/morning-update"
 mkdir -p "$LOG_DIR"
 
 echo "=== $(date '+%F %T') morning-update start"
@@ -22,6 +22,21 @@ if command -v brew >/dev/null 2>&1; then
   # Count upgraded packages from the upgrade output for the feed summary.
   upgraded="$(brew upgrade 2>&1 | tee /dev/stderr | grep -c '^==> Upgrading' || true)"
   brew_summary="brew upgraded ${upgraded:-0}"
+
+  # The junk-drawer formulae are head-only, and plain `brew upgrade` never
+  # fetches HEAD, so they would otherwise stay on whatever commit installed them.
+  head_formulae="$(brew list --full-name --formula | grep '^liaden/junk-drawer/' || true)"
+  if [ -n "$head_formulae" ]; then
+    echo "--- brew upgrade --fetch-HEAD (junk-drawer)"
+    # shellcheck disable=SC2086  # one formula name per word
+    if head_out="$(brew upgrade --fetch-HEAD $head_formulae 2>&1)"; then
+      head_upgraded="$(grep -c '^==> Upgrading' <<<"$head_out" || true)"
+      brew_summary="$brew_summary; junk-drawer HEAD upgraded ${head_upgraded:-0}"
+    else
+      brew_summary="$brew_summary; junk-drawer HEAD upgrade failed (see log)"
+    fi
+    echo "$head_out"
+  fi
 else
   echo "brew not found; skipping"
 fi

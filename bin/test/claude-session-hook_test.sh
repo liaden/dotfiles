@@ -20,7 +20,7 @@ state="$tmp/home/.local/state/claude-sessions"
 mkdir -p "$repo" "$tmp/bin" "$state"
 git -C "$repo" init -q -b feature/PLATFORM-1234-retry-payments
 
-for tool in herdr notify-send; do
+for tool in herdr notify-send osascript; do
   cat > "$tmp/bin/$tool" <<EOF
 #!/usr/bin/env bash
 printf '%s\n' "$tool \$*" >> "$tmp/calls"
@@ -66,19 +66,19 @@ check "a 2nd execute-plan warns in herdr, naming the other run" \
   "1" "$(grep -c '^herdr notification show .*OPS-7' "$tmp/calls")"
 
 hook UserPromptSubmit "$(input s2 '/execute-plan planning/b.md')"
-check "outside herdr the warning goes to notify-send" \
-  "1" "$(grep -c '^notify-send .*OPS-7' "$tmp/calls")"
+check "outside herdr the warning goes to the desktop notifier" \
+  "1" "$(grep -cE '^(notify-send|osascript) .*OPS-7' "$tmp/calls")"
 
 hook UserPromptSubmit "$(input s2 'investigate the 500s')"
-check "other prompts do not warn" "" "$(grep -E '^(notify-send|herdr notification)' "$tmp/calls" || true)"
+check "other prompts do not warn" "" "$(grep -E '^(notify-send|osascript|herdr notification)' "$tmp/calls" || true)"
 
 jq '.status = "idle"' "$state/other.json" > "$state/other.tmp" && mv "$state/other.tmp" "$state/other.json"
 hook UserPromptSubmit "$(input s2 '/execute-plan planning/b.md')"
-check "an idle execute-plan session does not count" "" "$(grep -E '^notify-send' "$tmp/calls" || true)"
+check "an idle execute-plan session does not count" "" "$(grep -E '^(notify-send|osascript)' "$tmp/calls" || true)"
 
 jq '.status = "working" | .pid = 999999' "$state/other.json" > "$state/other.tmp" && mv "$state/other.tmp" "$state/other.json"
 hook UserPromptSubmit "$(input s2 '/execute-plan planning/b.md')"
-check "a dead session does not count" "" "$(grep -E '^notify-send' "$tmp/calls" || true)"
+check "a dead session does not count" "" "$(grep -E '^(notify-send|osascript)' "$tmp/calls" || true)"
 
 echo
 if (( failures )); then echo "$failures failed"; exit 1; fi

@@ -4,6 +4,8 @@
 # Invoked by the systemd user timer mempalace-refresh.timer.
 set -uo pipefail
 export PATH="$HOME/.local/bin:$PATH"
+# onnxruntime telemetry can spin forever at process exit, wedging the whole refresh.
+export ORT_DISABLE_TELEMETRY=1
 log(){ echo "[$(date '+%F %T')] $*"; }
 
 # Run a `mempalace mine` invocation, log its matching summary lines on

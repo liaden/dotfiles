@@ -3,7 +3,8 @@
 mempalace holds past sessions and decisions, 1 wing per repo. Use it to find what was
 decided before and why.
 
-Read-only commands only. A systemd timer keeps the palace fresh, so never run `mine`,
+Read-only commands only. A scheduled job keeps the palace fresh (systemd timer on Linux, launchd agent
+com.mempalace.refresh on the Mac), so never run `mine`,
 `sync`, or any command that writes.
 
 ```bash

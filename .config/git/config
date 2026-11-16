@@ -116,3 +116,5 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !gh auth git-credential
+[includeIf "gitdir:~/dev/"]
+	path = /Users/joel.johnson/.config/git/work
