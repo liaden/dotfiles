@@ -37,7 +37,8 @@ Main-session habits. Each one has cost a full suite run when it slipped:
 - If the Execution log already has entries, resume from it: skip landed cards, and
   check `git worktree list` for cards that were in flight. A landing runner from an
   earlier session may still be running: find it by pid before starting another.
-- Otherwise set status to `in-progress` and record in the Execution log the base
+- Otherwise set status to `in-progress`, and write `base: <full sha of the base branch tip>`
+  on the line after `status:` so a reviewer can later diff the whole run. Record in the Execution log the base
   branch, its SHA, `git worktree list`, and `git status --porcelain` including staged
   entries. Unstage pre-staged user work for the run and record the command that
   re-stages it at close-out.
@@ -218,7 +219,8 @@ a card. List processes the suite may have left behind (children of test runners,
 editors, servers) and stop the ones this run started. Re-stage the user work unstaged
 at step 1. After any landing that was killed mid-hook, diff the tree against the
 start status and look in `~/.cache/pre-commit/patch*` for a stash the hook never
-restored. Set status to `done`. Confirm `git worktree list` and `git branch --list`
+restored. Set status to `done`, and write `head: <full sha of the base branch tip>` beside
+`status: done`. Confirm `git worktree list` and `git branch --list`
 match the start of the run. Summarize: what landed, what the panel caught, what went
 to the user, any manual pass still owed, and the friction log path with its entry
 count.
