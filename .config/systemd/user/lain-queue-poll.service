@@ -1,0 +1,8 @@
+[Unit]
+Description=Count the review requests asked of me for the lain HUDs
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:%h/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=%h
+ExecStart=%h/.local/bin/lain queue poll
