@@ -1,0 +1,14 @@
+[Unit]
+Description=Start the lain daemon at login (it runs the review poll every 5 minutes)
+After=network-online.target
+
+[Service]
+Type=oneshot
+# The daemon outlives `lain daemon ensure`; without this systemd reaps it when the oneshot ends.
+RemainAfterExit=yes
+Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:%h/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=%h
+ExecStart=%h/.local/bin/lain daemon ensure
+
+[Install]
+WantedBy=default.target

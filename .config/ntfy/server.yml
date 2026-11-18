@@ -1,0 +1,5 @@
+# Local ntfy for lain's waiting-item notices; reachable only on the tailnet.
+base-url: "http://100.77.172.52:2586"
+listen-http: "100.77.172.52:2586"
+cache-file: "/home/tara/.local/share/ntfy/cache.db"
+cache-duration: "12h"

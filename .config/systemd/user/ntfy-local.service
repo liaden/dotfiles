@@ -1,0 +1,12 @@
+[Unit]
+Description=ntfy server for lain notices, on the tailscale address only
+After=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/ntfy serve --config %h/.config/ntfy/server.yml
+# tailscale0 may not have its address yet at login; retry until it does
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
