@@ -169,6 +169,11 @@ VirtualBox VMs
 !.claude/hooks/
 .claude/hooks/*
 !.claude/hooks/herdr-agent-state.sh
+!.claude/hooks/vale-prose.sh
+!.claude/vale/
+.claude/vale/styles/*
+!.claude/vale/styles/Plans/
+!.claude/vale/styles/config/
 !.claude/CLAUDE.md
 !.claude/agents/
 !.claude/reference/

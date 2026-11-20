@@ -1,0 +1,35 @@
+extends: existence
+message: "'%s' is on the banned word list in writing-style.md."
+level: error
+ignorecase: true
+tokens:
+  - delve
+  - realm
+  - unlock
+  - tapestry
+  - paradigm
+  - cutting-edge
+  - intricate
+  - crucial
+  - pivotal
+  - meticulous(ly)?
+  - leverage
+  - synergy
+  - innovative
+  - game-changer
+  - highlight
+  - emphasize
+  - showcase
+  - enhance
+  - holistic
+  - seamless(ly)?
+  - optimize
+  - scalable
+  - robust
+  - streamline
+  - empower
+  - load-bearing
+  - valuable
+  - underscore
+  - align
+  - foster

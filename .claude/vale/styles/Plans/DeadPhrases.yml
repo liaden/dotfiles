@@ -1,0 +1,23 @@
+extends: existence
+message: "'%s' is a dead phrase or transition from writing-style.md; cut it or say it plainly."
+level: error
+ignorecase: true
+tokens:
+  - it is important to note
+  - it is worth noting
+  - in order to
+  - moving forward
+  - at the end of the day
+  - in other words
+  - furthermore
+  - additionally
+  - moreover
+  - that said
+  - that being said
+  - on top of that
+  - serves as
+  - stands as
+  - plays a role in
+  - aims to
+  - seeks to
+  - think of it as

@@ -188,6 +188,17 @@
             "command": "/Users/joel.johnson/.iterm2/cc-status"
           }
         ]
+      },
+      {
+        "matcher": "mcp__atlassian__(addCommentToJiraIssue|createJiraIssue|editJiraIssue|createConfluencePage|updateConfluencePage|createConfluenceFooterComment|createConfluenceInlineComment)|mcp__notion__notion-(create-pages|update-page|create-comment|update-comment|create-suggested-edit)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/vale-prose.sh",
+            "timeout": 30,
+            "statusMessage": "Linting prose with vale"
+          }
+        ]
       }
     ],
     "SessionEnd": [

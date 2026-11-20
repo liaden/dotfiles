@@ -1,0 +1,7 @@
+extends: existence
+message: "Use a period, comma, colon, semicolon or parentheses instead of a dash."
+level: error
+nonword: true
+tokens:
+  - '—'
+  - '\s–\s'

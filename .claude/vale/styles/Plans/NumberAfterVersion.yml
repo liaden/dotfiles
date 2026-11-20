@@ -1,0 +1,7 @@
+extends: existence
+message: "'%s' puts a count right after a version number; spell the count out or reword (for example 'one workflow at a time')."
+level: warning
+ignorecase: true
+nonword: true
+tokens:
+  - '\bv\d+(\.\d+)?\s+\d+\b'

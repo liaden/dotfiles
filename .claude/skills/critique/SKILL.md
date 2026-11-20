@@ -21,3 +21,11 @@ argument-hint: <path, PR number, or "staged">
    BLOCKER, SHOULD-FIX, NIT, each with its persona, then 1 verdict. Naming findings keep
    their ranked candidate names and the 1 line reason for the first. Change nothing
    unless asked.
+5. **Lint comments for someone else's PR.** When the target is a PR and its author
+   (`gh pr view <n> --json author -q .author.login`) is not me (`gh api user -q .login`),
+   the comments get posted where teammates read them. Write each proposed comment to its
+   own `.md` file in the scratch directory and run
+   `vale --config ~/.vale.ini <files>`. Fix every error and warning,
+   fix the suggestions that make the comment clearer, and run vale again until it is
+   clean or the remaining alerts are on purpose. Show the linted text, not the draft.
+   Skip this step for my own work.
