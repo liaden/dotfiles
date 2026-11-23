@@ -31,6 +31,8 @@
 	autoSquash = true
 
 [alias]
+    gud = !echo "RTFM"
+
     s = status
     ff = merge --ff-only
 
